@@ -124,6 +124,19 @@
 					<f:verbatim></div></f:verbatim>
 				</h:panelGroup>
 				
+				<h:dataTable styleClass="listHier" value="#{topic.attachList}" var="eachAttach" rendered="#{!empty topic.attachList}" cellpadding="0" cellspacing="0" columnClasses="attach,bogus" summary="layout">
+					  <h:column>
+					  <%-- gsilver: need to tie in the attachment type to actual  MIME type mapping tables instead of the below (which is prevalent everywhere) or at the very least provide a mechanism for defaults. --%> 
+						<sakai:contentTypeMap fileType="#{eachAttach.attachment.attachmentType}" mapType="image" var="imagePath" pathPrefix="/library/image/"/>									
+						<h:graphicImage id="exampleFileIcon" value="#{imagePath}" />						
+						</h:column>
+						<h:column>
+						<h:outputLink value="#{eachAttach.url}" target="_blank">
+							<h:outputText value="#{eachAttach.attachment.attachmentName}" />
+						</h:outputLink>				  
+					</h:column>
+			  </h:dataTable>
+				
 				
 			<f:verbatim></div></f:verbatim>
 			

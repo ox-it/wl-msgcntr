@@ -85,12 +85,26 @@
 					  		onclick="resize();$(this).prev('.show').toggle(); $('div.toggle').slideToggle(resize);$(this).toggle();">
 					  		<h:outputText value="#{msgs.cdfm_hide_full_description}" />
 					  </h:outputLink>
-				    
+				   
 				</p>
-				<br />
+			
 				<f:verbatim><div class="toggle" style="display:none"></f:verbatim>
 					<mf:htmlShowArea  id="forum_fullDescription" hideBorder="false"	 value="#{ForumTool.selectedTopic.topic.extendedDescription}"/> 
 			    <f:verbatim></div></f:verbatim>
+					
+				<h:dataTable styleClass="listHier" value="#{ForumTool.selectedTopic.attachList}" var="eachAttach" rendered="#{!empty ForumTool.selectedTopic.attachList}" cellpadding="0" cellspacing="0" columnClasses="attach,bogus" summary="layout">
+					  <h:column>
+					  <%-- gsilver: need to tie in the attachment type to actual  MIME type mapping tables instead of the below (which is prevalent everywhere) or at the very least provide a mechanism for defaults. --%> 
+						<sakai:contentTypeMap fileType="#{eachAttach.attachment.attachmentType}" mapType="image" var="imagePath" pathPrefix="/library/image/"/>									
+						<h:graphicImage id="exampleFileIcon" value="#{imagePath}" />						
+						</h:column>
+						<h:column>
+						<h:outputLink value="#{eachAttach.url}" target="_blank">
+							<h:outputText value="#{eachAttach.attachment.attachmentName}" />
+						</h:outputLink>				  
+					</h:column>
+			  </h:dataTable>
+			  
 				<%--<%@include file="dfViewSearchBar.jsp"%> --%>
      <%-- gsilver:need a rendered attribute here that will toggle the display of the table (if messages) or a textblock (class="instruction") if there are no messages--%> 				
    		
