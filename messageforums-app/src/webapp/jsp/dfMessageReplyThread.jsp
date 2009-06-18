@@ -39,7 +39,6 @@
 
           </h:panelGrid>
           
-          <h:messages globalOnly="true" infoClass="success" errorClass="alertMessage" />
           <h:message for="df_compose_title" styleClass="alertMessage" id="errorMessages" />
 		  <h4>
 		     <h:outputText value="#{msgs.cdfm_message}" /> 
