@@ -209,9 +209,18 @@ public class ForumsEmailService {
 					.getResourceBundleString("email.body.msgposted")
 					+ " " + reply.getCreated().toString());
 			content.append(newline);
+			content.append(newline);
 			content.append(reply.getBody());
 			content.append(newline);
 			content.append(newline);
+			content.append("<hr/>");
+			content.append("<em>" + 
+					DiscussionForumTool.getResourceBundleString("email.notify.msg", 
+							new Object[]{"<a href=\"" + getRedirectURL(currentSite) + "\" target=\"_blank\" >" + 
+							DiscussionForumTool.getResourceBundleString("cdfm_discussion_forums") +
+							"</a>", "<strong>" + DiscussionForumTool.getResourceBundleString("watch") + 
+							"</strong>"}) +
+					"</em>");
 			if (log.isDebugEnabled()) {
 				log.debug("Email content: " + content.toString());
 			}
