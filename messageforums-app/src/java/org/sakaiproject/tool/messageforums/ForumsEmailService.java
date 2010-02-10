@@ -114,7 +114,6 @@ public class ForumsEmailService {
 				
 			Session session;
 			session = Session.getInstance(props, null);
-			session.setDebug(true);
 			
 			MimeMessage msg = new MimeMessage(session);
 			
