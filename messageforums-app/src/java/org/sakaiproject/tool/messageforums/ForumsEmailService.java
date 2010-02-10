@@ -99,6 +99,10 @@ public class ForumsEmailService {
 		Attachment a = null;
 		try {
 			Properties props = System.getProperties();
+			// TODO
+
+			// check for testMode@org.sakaiproject.email.api.EmailService
+			// Server
 			if (smtpServer == null || smtpServer.equals("")) {
 				log
 						.info("smtp@org.sakaiproject.email.api.EmailService is not set");
@@ -109,10 +113,9 @@ public class ForumsEmailService {
 			props.setProperty("mail.smtp.host", smtpServer);
 				
 			Session session;
-			String testmode = ServerConfigurationService.getString(
-				"testMode@org.sakaiproject.email.api.EmailService");
-			props.setProperty("mail.debug", "true".equalsIgnoreCase(testmode) ? "true" : "false" );
 			session = Session.getInstance(props, null);
+			session.setDebug(true);
+			
 			MimeMessage msg = new MimeMessage(session);
 			
 
@@ -255,6 +258,8 @@ public class ForumsEmailService {
 			}
 			msg.setContent(multipart);
 
+			String testmode = ServerConfigurationService
+					.getString("testMode@org.sakaiproject.email.api.EmailService");
 			if ("true".equalsIgnoreCase(testmode)) {
 				log.info("Email testMode = true,  printing out text: ");
 				Enumeration<String> en = msg.getAllHeaderLines();
