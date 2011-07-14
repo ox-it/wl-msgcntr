@@ -63,6 +63,8 @@ import org.sakaiproject.entity.cover.EntityManager;
 import org.sakaiproject.exception.IdUnusedException;
 import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.component.cover.ServerConfigurationService;
+import org.sakaiproject.content.api.ContentCopy;
+import org.sakaiproject.content.api.ContentCopyContext;
 import org.sakaiproject.content.api.ContentHostingService;
 import org.sakaiproject.content.api.ContentResource;
 import org.sakaiproject.service.gradebook.shared.GradebookService;
@@ -117,6 +119,7 @@ public class DiscussionForumServiceImpl  implements DiscussionForumService, Enti
 	private DiscussionForumManager dfManager;
 	private PermissionLevelManager permissionManager;
 	private ContentHostingService contentHostingService;
+	private ContentCopy contentCopy;
 	
 	public void setContentHostingService(ContentHostingService contentHostingService) {
 		this.contentHostingService = contentHostingService;
@@ -411,6 +414,7 @@ public class DiscussionForumServiceImpl  implements DiscussionForumService, Enti
 		try 
 		{
 			LOG.debug("transfer copy mc items by transferCopyEntities");
+			ContentCopyContext context = contentCopy.createCopyContext(fromContext, toContext, true);
 
 			//List fromDfList = dfManager.getDiscussionForumsByContextId(fromContext);
 			List fromDfList = dfManager.getDiscussionForumsWithTopicsMembershipNoAttachments(fromContext);
@@ -430,13 +434,10 @@ public class DiscussionForumServiceImpl  implements DiscussionForumService, Enti
 						if (fromForum.getShortDescription() != null && fromForum.getShortDescription().length() > 0) 
 							newForum.setShortDescription(fromForum.getShortDescription());
 
-						if (fromForum.getExtendedDescription() != null && fromForum.getExtendedDescription().length() > 0) 
-							newForum.setExtendedDescription(fromForum.getExtendedDescription());
-
-						newForum.setDraft(fromForum.getDraft());
-						newForum.setLocked(fromForum.getLocked());
-						newForum.setModerated(fromForum.getModerated());
-						newForum.setAutoMarkThreadsRead(fromForum.getAutoMarkThreadsRead());
+						if (fromForum.getExtendedDescription() != null && fromForum.getExtendedDescription().length() > 0) {
+							String newDescription = contentCopy.convertContent(context, fromForum.getExtendedDescription(), "text/html", null);
+							newForum.setExtendedDescription(newDescription);
+						}
 
 						// set the forum order. any existing forums will be first
 						// if the "from" forum has a 0 sort index, there is no sort order
@@ -526,8 +527,10 @@ public class DiscussionForumServiceImpl  implements DiscussionForumService, Enti
 								newTopic.setTitle(fromTopic.getTitle());
 								if (fromTopic.getShortDescription() != null && fromTopic.getShortDescription().length() > 0)
 									newTopic.setShortDescription(fromTopic.getShortDescription());
-								if (fromTopic.getExtendedDescription() != null && fromTopic.getExtendedDescription().length() > 0)
-									newTopic.setExtendedDescription(fromTopic.getExtendedDescription());
+								if (fromTopic.getExtendedDescription() != null && fromTopic.getExtendedDescription().length() > 0) {
+									String newDescription = contentCopy.convertContent(context, fromTopic.getExtendedDescription(), "text/html", null);
+									newTopic.setExtendedDescription(newDescription);
+								}
 								newTopic.setLocked(fromTopic.getLocked());
 								newTopic.setDraft(fromTopic.getDraft());
 								newTopic.setModerated(fromTopic.getModerated());
@@ -580,6 +583,7 @@ public class DiscussionForumServiceImpl  implements DiscussionForumService, Enti
 					}	
 				}
 			}			
+			contentCopy.copyReferences(context);
 		}
 
 		catch (Exception e) {
@@ -1015,6 +1019,11 @@ public class DiscussionForumServiceImpl  implements DiscussionForumService, Enti
 	public void setAreaManager(AreaManager areaManager)
 	{
 		this.areaManager = areaManager;
+	}
+	
+	public void setContentCopy(ContentCopy contentCopy)
+	{
+		this.contentCopy = contentCopy;
 	}
 
 	public String trimToNull(String value)
