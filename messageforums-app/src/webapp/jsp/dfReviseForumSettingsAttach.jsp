@@ -187,6 +187,15 @@
     					<f:selectItem itemValue="false" itemLabel="#{msgs.cdfm_no}"/>
   					</h:selectOneRadio>
 				</h:panelGroup>
+			<h:panelGroup>
+					<h:outputText  value="#{msgs.cdfm_markup_free}" />	
+				</h:panelGroup>
+				<h:panelGroup>
+					<h:selectOneRadio layout="lineDirection"  id="markup_free"  value="#{ForumTool.selectedForum.markupFree}"  styleClass="selectOneRadio">
+    					<f:selectItem itemValue="true" itemLabel="#{msgs.cdfm_yes}"/>
+    					<f:selectItem itemValue="false" itemLabel="#{msgs.cdfm_no}"/>
+  					</h:selectOneRadio>
+				</h:panelGroup>
 			</h:panelGrid>
 			</div>
 			

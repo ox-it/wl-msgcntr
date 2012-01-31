@@ -126,6 +126,9 @@
       <property name="autoMarkThreadsRead">
         <column name="AUTO_MARK_THREADS_READ" not-null="true" />
       </property>
+      <property name="markupFree">
+        <column name="MARKUP_FREE" not-null="true" />
+      </property>
     </subclass>
 
   </class>
