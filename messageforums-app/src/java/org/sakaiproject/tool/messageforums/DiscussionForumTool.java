@@ -8744,6 +8744,13 @@ public class DiscussionForumTool
         return threadHead;
 	}
 
+
+	public String getButtonSet()
+	{
+		String rv = new Boolean(selectedForum.getMarkupFree()).booleanValue() ?"Minimal":"Default"; 
+		return rv;
+	}
+
 	public String getEditorRows() {
 		return ServerConfigurationService.getString("msgcntr.editor.rows", "22");
 	}

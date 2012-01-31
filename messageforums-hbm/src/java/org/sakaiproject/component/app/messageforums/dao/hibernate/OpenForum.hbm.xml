@@ -129,6 +129,9 @@
       <property name="postFirst">
         <column name="POST_FIRST" not-null="true" />
       </property> 
+      <property name="markupFree">
+        <column name="MARKUP_FREE" not-null="true" />
+      </property>
     </subclass>
 
   </class>

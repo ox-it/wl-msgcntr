@@ -107,7 +107,7 @@
 			<%--RTEditor area - if enabled--%>
 			<h:panelGroup rendered="#{! ForumTool.disableLongDesc}">
 				<h:outputText id="outputLabel2" value="#{msgs.cdfm_fullDescription}" style="display:block;padding:.5em 0"/>
-			<sakai:inputRichText textareaOnly="#{PrivateMessagesTool.mobileSession}" rows="#{ForumTool.editorRows}" cols="132" id="df_compose_description" value="#{ForumTool.selectedForum.forum.extendedDescription}">
+			<sakai:inputRichText textareaOnly="#{PrivateMessagesTool.mobileSession}" buttonSet="#{ForumTool.buttonSet}" rows="#{ForumTool.editorRows}" cols="120" id="df_compose_description" value="#{ForumTool.selectedForum.forum.extendedDescription}">
 				<f:validateLength maximum="65000"/>
 			</sakai:inputRichText>
 	      	</h:panelGroup>
@@ -195,6 +195,12 @@
 						title="postFirst" value="#{ForumTool.selectedForum.forumPostFirst}"
 						id="postFirst">
 					</h:selectBooleanCheckbox> <h:outputLabel for="postFirst" value="#{msgs.cdfm_postFirst}" />
+				</p>
+				<p class="checkbox">
+					<h:selectBooleanCheckbox
+						title="postFirst" value="#{ForumTool.selectedForum.markupFree}"
+						id="markup_free">
+					</h:selectBooleanCheckbox> <h:outputLabel for="markup_free" value="#{msgs.cdfm_markup_free}" />
 				</p>
 			</div>
 			<h4><h:outputText  value="#{msgs.cdfm_forum_availability}" /></h4>
