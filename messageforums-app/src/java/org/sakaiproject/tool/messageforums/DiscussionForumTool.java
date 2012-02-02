@@ -93,6 +93,7 @@ import org.sakaiproject.site.api.Group;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.cover.SiteService;
 import org.sakaiproject.thread_local.cover.ThreadLocalManager;
+import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.ToolSession;
 import org.sakaiproject.tool.cover.SessionManager;
 import org.sakaiproject.tool.cover.ToolManager;
@@ -7847,6 +7848,15 @@ public class DiscussionForumTool
         }
         
         return threadHead;
+	}
+	
+	public String getTextForum()
+	{
+		Session session = SessionManager.getCurrentSession();
+		String rv = (session.getAttribute("is_wireless_device") != null 
+					 && ((Boolean) session.getAttribute("is_wireless_device")).booleanValue()) 
+					 || new Boolean(selectedForum.getMarkupFree()).booleanValue() ?"true":"false"; 
+		return rv;
 	}
 }
 
