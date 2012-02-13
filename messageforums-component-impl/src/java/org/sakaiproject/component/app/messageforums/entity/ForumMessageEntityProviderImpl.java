@@ -43,7 +43,6 @@ import org.sakaiproject.entitybroker.entityprovider.search.Search;
 import org.sakaiproject.site.cover.SiteService;
 import org.sakaiproject.user.api.UserNotDefinedException;
 import org.sakaiproject.user.cover.UserDirectoryService;
-import org.sakaiproject.util.FormattedText;
 import org.springframework.orm.hibernate3.HibernateOptimisticLockingFailureException;
 
 public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvider,
@@ -189,9 +188,7 @@ private RequestStorage requestStorage;
 
   }
   
-  public List<DecoratedMessage> findReplies(
-		  List<Message> messages, Long messageId, Long topicId, Map msgIdReadStatusMap, boolean markupFree){
-	  
+  public List<DecoratedMessage> findReplies(List<Message> messages, Long messageId, Long topicId, Map msgIdReadStatusMap){
 	  List<DecoratedMessage> replies = new ArrayList<DecoratedMessage>();
 
 	  for (Message message : messages) {
@@ -210,12 +207,9 @@ private RequestStorage requestStorage;
 
 					  DecoratedMessage dMessage = new DecoratedMessage(message
 							  .getId(), topicId, message.getTitle(),
-							  markupFree ? html2text(message.getBody()) : message.getBody(),
-							  "" + message.getModified().getTime(),
-							  attachments, 
-							  findReplies(messages, message.getId(), 
-									  topicId, msgIdReadStatusMap, markupFree), 
-							  message.getAuthor(), message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
+							  message.getBody(), "" + message.getModified().getTime(),
+							  attachments, findReplies(messages, message.getId(),
+									  topicId, msgIdReadStatusMap), message.getAuthor(), message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
 											  "" + message.getCreated().getTime(), readStatus.booleanValue(), "", "");
 					  replies.add(dMessage);
 				  }		  
@@ -317,12 +311,9 @@ private RequestStorage requestStorage;
 
 							  DecoratedMessage dMessage = new DecoratedMessage(message
 									  .getId(), new Long(topicId), message.getTitle(),
-									  dForum.getMarkupFree() ? html2text(message.getBody()) : message.getBody(),
-									  "" + message.getModified().getTime(),
-									  attachments, 
-									  findReplies(messages, message.getId(),
-											  new Long(topicId), msgIdReadStatusMap, dForum.getMarkupFree()), 
-									  message.getAuthor(), message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
+									  message.getBody(), "" + message.getModified().getTime(),
+									  attachments, findReplies(messages, message.getId(),
+											  new Long(topicId), msgIdReadStatusMap), message.getAuthor(), message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
 													  "" + message.getCreated().getTime(), readStatus.booleanValue(), "", "");				  
 
 							  dMessages.add(dMessage);
@@ -453,22 +444,6 @@ private RequestStorage requestStorage;
 	  }
 
   }
-  
-  	/**
-  	 * filter the plain text to remove all HTML markup
-  	 * @param html
-  	 * @return
-  	 */
-    private String html2text(String html) {
-    	
-    	//html = html.replaceAll("\\<br.*?>","\n");
-    	//html = html.replaceAll("\\<p>","\n\n");
-    	
-    	// strips all markup
-    	html = html.replaceAll("\\<.*?>","");
-    	
-    	return FormattedText.unEscapeHtml(html);
-  	}
   
   /**
 	 * Given a list of messages, will return all messages that meet at
