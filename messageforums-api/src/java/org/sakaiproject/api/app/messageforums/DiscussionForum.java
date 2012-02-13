@@ -46,5 +46,5 @@ public interface DiscussionForum extends OpenForum {
     
     public Boolean getMarkupFree();
     
-    public void setMarkupFree(Boolean markupFreed);
+    public void setMarkupFree(Boolean markupFree);
 }
