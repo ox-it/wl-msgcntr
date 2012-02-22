@@ -59,6 +59,10 @@
 		     		<ref bean="org.sakaiproject.db.api.SqlService"/>
 		    </property>        
     </bean>
+    
+    <bean id="org.sakaiproject.api.app.messageforums.MessageParsingService" 
+        class="org.sakaiproject.component.app.messageforums.MessageParsingServiceImpl" >  
+    </bean>
      
     <bean id="org.sakaiproject.api.app.messageforums.DummyDataHelperApi" class="org.sakaiproject.component.app.messageforums.DummyDataHelper">
         <property name="typeMgr">
@@ -271,6 +275,9 @@
 		        </property>
 		        <property name="contentHostingService">
         		    <ref bean="org.sakaiproject.content.api.ContentHostingService"/>
+		        </property>
+		        <property name="messageParsingService">
+        		    <ref bean="org.sakaiproject.api.app.messageforums.MessageParsingService"/>
 		        </property>
             </bean>            
         </property>

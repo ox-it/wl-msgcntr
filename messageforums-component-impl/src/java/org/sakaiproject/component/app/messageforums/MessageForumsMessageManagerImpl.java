@@ -40,10 +40,12 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.sakaiproject.api.app.messageforums.Attachment;
 import org.sakaiproject.api.app.messageforums.BaseForum;
+import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionForumService;
 import org.sakaiproject.api.app.messageforums.Message;
 import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
+import org.sakaiproject.api.app.messageforums.MessageParsingService;
 import org.sakaiproject.api.app.messageforums.PrivateMessage;
 import org.sakaiproject.api.app.messageforums.SynopticMsgcntrManager;
 import org.sakaiproject.api.app.messageforums.Topic;
@@ -102,6 +104,8 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
     private EventTrackingService eventTrackingService;
     
     private ContentHostingService contentHostingService;
+    
+    private MessageParsingService messageParsingService;
 
     public void init() {
        LOG.info("init()");
@@ -142,6 +146,10 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
     
     public void setContentHostingService(ContentHostingService contentHostingService) {
 		this.contentHostingService = contentHostingService;
+	}
+    
+    public void setMessageParsingService(MessageParsingService messageParsingService) {
+		this.messageParsingService = messageParsingService;
 	}
  
     /**
@@ -1082,6 +1090,16 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
               LOG.info("saveMessage executed [messageId: " + (isNew ? "new" : message.getId().toString()) + "] but forum is locked -- save aborted");
               throw new LockedException("Message could not be saved [messageId: " + (isNew ? "new" : message.getId().toString()) + "]");
           }
+        }
+        
+        boolean markupFree = false;
+        BaseForum forum = message.getTopic().getBaseForum();
+        if (forum instanceof DiscussionForum) {
+        	DiscussionForum dForum = (DiscussionForum)forum;
+        	markupFree = dForum.getMarkupFree();
+        }
+        if (markupFree) {
+        	message.setBody(messageParsingService.parse(message.getBody()));
         }
         
         message.setModified(new Date());
