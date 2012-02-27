@@ -25,7 +25,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <sakai.common.version>1.1.3</sakai.common.version>
         <sakai.edu-services.version>1.1.2</sakai.edu-services.version>
-        <sakai.jsf.version>2.8.2</sakai.jsf.version>
+        <sakai.jsf.version>2.8.4-SNAPSHOT</sakai.jsf.version>
         <sakai.scheduler.version>2.8.1</sakai.scheduler.version>
         <sakai.search.version>1.3.4</sakai.search.version>
         <!-- Needed as the content-copy isn't in the standard kernel -->
