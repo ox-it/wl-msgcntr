@@ -3,19 +3,24 @@ package org.sakaiproject.component.app.messageforums.entity;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.api.app.messageforums.Area;
+import org.sakaiproject.api.app.messageforums.DBMembershipItem;
 import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionTopic;
 import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
+import org.sakaiproject.api.app.messageforums.OpenForum;
 import org.sakaiproject.api.app.messageforums.PrivateForum;
 import org.sakaiproject.api.app.messageforums.PrivateTopic;
 import org.sakaiproject.api.app.messageforums.Topic;
@@ -27,7 +32,6 @@ import org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager;
 import org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager;
 import org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager;
 import org.sakaiproject.component.app.messageforums.dao.hibernate.PrivateTopicImpl;
-import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.entitybroker.EntityReference;
 import org.sakaiproject.entitybroker.EntityView;
 import org.sakaiproject.entitybroker.entityprovider.annotations.EntityCustomAction;
@@ -44,6 +48,7 @@ import org.sakaiproject.entitybroker.entityprovider.extension.RequestStorage;
 import org.sakaiproject.entitybroker.entityprovider.search.Restriction;
 import org.sakaiproject.entitybroker.entityprovider.search.Search;
 import org.sakaiproject.user.cover.UserDirectoryService;
+import org.sakaiproject.util.FormattedText;
 import org.sakaiproject.util.ResourceLoader;
 
 public class TopicEntityProviderImpl implements TopicEntityProvider,
@@ -176,32 +181,207 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 
 	public String createEntity(EntityReference ref, Object entity,
 			Map<String, Object> params) {
-		// TODO Auto-generated method stub
-		return null;
+		
+		System.out.println("ForumTopicEntityPrivider.createEntity");
+		
+  		String userId = UserDirectoryService.getCurrentUser().getId();
+  		if (userId == null || "".equals(userId)){
+  			throw new SecurityException("Could not create entity, permission denied: " + ref);
+  		}
+	 
+  		Long topicId = null;
+        
+      	if (entity.getClass().isAssignableFrom(DecoratedTopicInfo.class)) {
+          
+      	    try {
+      	    	
+      	    	DecoratedTopicInfo dTopic = (DecoratedTopicInfo) entity;
+      	    	if (topicId == null && dTopic.getTopicId() != null) {
+          			topicId = dTopic.getTopicId();
+          		}
+      	    	
+      	    	if (dTopic.getForumId() == null) {
+      	    		throw new IllegalArgumentException("Invalid entity for creation, no forum entered");
+      	    	}
+      	    	DiscussionForum forum = forumManager.getForumById(dTopic.getForumId());
+      	    	if (forum == null) {
+      	    		throw new IllegalArgumentException("Invalid entity for creation, no forum found");
+      	    	}
+      	      
+      	    	DiscussionTopic topic = forumManager.createTopic(forum);
+      	    	if (topic == null) {
+      	    		throw new IllegalArgumentException("Invalid entity for creation, failed to create topic");
+      	    	}
+
+      	    	String siteId = forumManager.getContextForForumById(forum.getId());
+      	    	if (!uiPermissionsManager.isNewTopic(forum, siteId)) {
+      	    		throw new SecurityException("Could not create entity, permission denied: " + ref);
+      	    	}
+      	    	
+      	    	StringBuilder alertMsg = new StringBuilder();
+      	    	topic.setTitle(FormattedText.processFormattedText(dTopic.getTopicTitle(), alertMsg));
+      	    	String shortDescFormatted = FormattedText.processFormattedText(dTopic.getTopicShortDescription(), alertMsg);
+      	    	if(shortDescFormatted.length() > 255){
+      	    		shortDescFormatted = shortDescFormatted.substring(0, 255);
+      	    	}
+      	    	topic.setShortDescription(shortDescFormatted);
+      	    	topic.setExtendedDescription(FormattedText.processFormattedText(dTopic.getTopicExtendedDescription(), alertMsg));
+      	    	
+      	    	List<DBMembershipItem> myList = forumManager.getTopicMembershipItems(siteId);
+      	    	Set<DBMembershipItem> mySet = new HashSet(myList);
+      	    	
+      	    	topic.setMembershipItemSet(mySet);
+      	    	
+      	    	forumManager.saveTopic(topic);
+      	    	
+          	} catch (Exception e) {
+          		e.printStackTrace();
+              	throw new SecurityException("Could not create Forum Message, permission denied: " + ref, e);
+          	} 
+      	    
+      	} else {
+      		throw new IllegalArgumentException("Invalid entity for creation, must be Topic or DecoratedTopicInfo object");
+      	}
+      	
+      	if (null == topicId) {
+      		return null;
+      	}
+      	return topicId.toString();
 	}
 
 	public Object getSampleEntity() {
-		// TODO Auto-generated method stub
-		return null;
+		return new DecoratedTopicInfo();
 	}
 
 	public void updateEntity(EntityReference ref, Object entity,
 			Map<String, Object> params) {
-		// TODO Auto-generated method stub
+		
+		String userId = UserDirectoryService.getCurrentUser().getId();
+    	if (userId == null || "".equals(userId)){
+    		throw new SecurityException("Could not get entity, permission denied: " + ref);
+    	}
+	  
+    	String id = ref.getId();
+    	if (id == null || "".equals(id)) {
+    		throw new IllegalArgumentException("Cannot update, No id in provided reference: " + ref);
+    	}
+    	
+    	DiscussionTopic topic = forumManager.getTopicById(new Long(ref.getId()));
+    	if (null == topic) {
+    		throw new IllegalArgumentException("Cannot update, No topic in provided reference: " + ref);
+    	}
+		DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+		if (forum == null) {
+			throw new IllegalArgumentException("Invalid entity for creation, no forum found");
+		}
+		if (!uiPermissionsManager.isChangeSettings(topic, forum)) {
+			throw new SecurityException("Could not get entity, permission denied: " + ref);
+		}
+    	if (entity.getClass().isAssignableFrom(DecoratedTopicInfo.class)) {
+    		// if they instead pass in the DecoratedMessage object
+    		DecoratedTopicInfo dTopic = (DecoratedTopicInfo) entity;
 
+  	    	
+    		String siteId = forumManager.getContextForForumById(forum.getId());
+    		
+			StringBuilder alertMsg = new StringBuilder();
+			topic.setTitle(FormattedText.processFormattedText(dTopic.getTopicTitle(), alertMsg));
+			topic.setShortDescription(FormattedText.processFormattedText(dTopic.getTopicShortDescription(), alertMsg));
+			topic.setModified(new Date());
+		
+    		//if (message.getInReplyTo() != null) {
+    			//grab a fresh copy of the message incase it has changes (staleobjectexception)
+    		//	message.setInReplyTo(forumManager.getMessageById(message.getInReplyTo().getId()));
+    		//}
+    		
+    		forumManager.saveTopic(topic);
+    	}
 	}
 
 	public Object getEntity(EntityReference ref) {
-		// TODO Auto-generated method stub
-		return null;
+		
+		DecoratedTopicInfo dTopic = null;
+		String userId = UserDirectoryService.getCurrentUser().getId();
+		//if (userId == null || "".equals(userId)){
+		//	throw new SecurityException("Could not get entity, permission denied: " + ref);
+		//}
+
+		DiscussionTopic topic = forumManager.getTopicById(new Long(ref.getId()));
+		if (null == topic) {
+			throw new IllegalArgumentException("IdUnusedException in Resource Entity Provider");
+		}
+		
+		DiscussionForum forum = forumManager.getForumById(topic.getBaseForum().getId());
+	    if (forum == null) {
+	    	  throw new IllegalArgumentException("Invalid entity for creation, no forum found");
+	    }
+	    String siteId = forumManager.getContextForForumById(forum.getId());
+
+		int unreadMessages = 0;
+		int totalMessages = 0;
+		
+		if (topic.getDraft().equals(Boolean.FALSE)) {
+			
+			if (getUiPermissionsManager().isRead(topic.getId(), topic.getDraft(), forum.getDraft(), userId, siteId)) {
+				
+				if (!topic.getModerated().booleanValue()
+						|| (topic.getModerated().booleanValue() && 
+							getUiPermissionsManager().isModeratePostings(topic.getId(), forum.getLocked(), forum.getDraft(), topic.getLocked(), topic.getDraft(), userId, siteId))){
+
+					unreadMessages = getMessageManager().findUnreadMessageCountByTopicIdByUserId(topic.getId(), userId);										
+				
+				} else {	
+					// b/c topic is moderated and user does not have mod perm, user may only
+					// see approved msgs or pending/denied msgs authored by user
+					unreadMessages = getMessageManager().findUnreadViewableMessageCountByTopicIdByUserId(topic.getId(), userId);
+				}
+			
+				totalMessages = getMessageManager().findViewableMessageCountByTopicIdByUserId(topic.getId(), userId);
+
+				dTopic = new DecoratedTopicInfo(
+					topic.getId(), topic.getTitle(), unreadMessages, totalMessages, "", 
+					topic.getBaseForum().getId(), topic.getShortDescription(), "");
+				
+			} else {
+				throw new SecurityException("Could not get entity, permission denied: " + ref);
+			}
+		}
+		
+		return dTopic;
 	}
 
 	public void deleteEntity(EntityReference ref, Map<String, Object> params) {
-		// TODO Auto-generated method stub
+		
+		String userId = UserDirectoryService.getCurrentUser().getId();
+		if (userId == null || "".equals(userId)){
+		    throw new SecurityException("Could not get entity, permission denied: " + ref);
+		}
+		  
+		String id = ref.getId();
+	    if (id == null || "".equals(id)) {
+	        throw new IllegalArgumentException("Cannot delete message, No id in provided reference: " + ref);
+	    }
+	    DiscussionTopic topic = forumManager.getTopicById(new Long(ref.getId()));
+		if (null == topic) {
+	        throw new IllegalArgumentException("Cannot delete topic, No topic in provided reference: " + ref);
+	    }
+		  
+		DiscussionForum forum = forumManager.getForumById(topic.getBaseForum().getId());
+	    if (forum == null) {
+	    	  throw new IllegalArgumentException("Invalid entity for creation, no forum found");
+	    }
+	    	
+  		String siteId = forumManager.getContextForForumById(forum.getId());
+		  
+		if (!uiPermissionsManager.isChangeSettings(topic, forum, siteId)) {
+		    throw new IllegalArgumentException("Cannot delete topic, Insufficient Privilages");
+	    }
 
+		forumManager.deleteTopic(topic);
 	}
 
 	public List<?> getEntities(EntityReference ref, Search search) {
+		
 		String siteId = null;
 		String forumId = null;
 		boolean privateMessages = false;
@@ -216,7 +396,7 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 		}		
 		
 		String userId = UserDirectoryService.getCurrentUser().getId();
-		if(userId == null || "".equals(userId)){
+		if (userId == null || "".equals(userId)) {
 			return null;
 		}
 
@@ -229,16 +409,13 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 
 				Area area = getPrivateMessageManager().getPrivateMessageArea(siteId);
 
-				if (area != null){    
+				if (area != null) {    
 					List aggregateList = new ArrayList();
 					PrivateForum pf = getPrivateMessageManager().initializePrivateMessageArea(area, aggregateList, userId, siteId);
 					pf = getPrivateMessageManager().initializationHelper(pf, area, userId);
 					List pvtTopics = pf.getTopics();
 					Collections.sort(pvtTopics, PrivateTopicImpl.TITLE_COMPARATOR);   //changed to date comparator
 					
-
-
-
 
 					List topicsbyLocalization= new ArrayList();// only three folder supported, if need more, please modifify here
 
@@ -259,8 +436,8 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 
 						PrivateTopic topic = (PrivateTopic) iterator.next();
 
-						if (topic != null)
-						{
+						if (topic != null) { 
+							
 						    String CurrentTopicTitle= topic.getTitle();//folder name
 
 							/** filter topics by context and type*/                                                    
@@ -277,21 +454,19 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 							{
 								typeUuid = getPrivateMessageTypeFromContext(topicsbyLocalization.get(countForFolderNum).toString());
 
-
-							}
-							else
-							{
-
+							} else {
 								typeUuid = getPrivateMessageTypeFromContext(topic.getTitle());
-
 							}
+							
 							countForFolderNum++;
 
 							int totalNoMessages = getPrivateMessageManager().findMessageCount(typeUuid, aggregateList);
 
 							int totalUnreadMessages = getPrivateMessageManager().findUnreadMessageCount(typeUuid, aggregateList);
 
-							DecoratedTopicInfo dTopicInfo = new DecoratedTopicInfo(topic.getId(), topic.getTitle(),totalUnreadMessages, totalNoMessages, typeUuid);
+							DecoratedTopicInfo dTopicInfo = new DecoratedTopicInfo(
+									topic.getId(), topic.getTitle(),totalUnreadMessages, totalNoMessages, typeUuid, 
+									topic.getBaseForum().getId(), topic.getShortDescription(), "");
 							dForum.addTopic(dTopicInfo);
 						}
 
@@ -300,9 +475,8 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 					while(iterator.hasNext())//add more folder 
 					{
 						PrivateTopic topic = (PrivateTopic) iterator.next();
-						if (topic != null)
-						{
-
+						
+						if (topic != null) {
 
 							/** filter topics by context and type*/                                                    
 							if (topic.getTypeUuid() != null
@@ -316,7 +490,9 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 							int totalNoMessages = getPrivateMessageManager().findMessageCount(typeUuid, aggregateList);
 							int totalUnreadMessages = getPrivateMessageManager().findUnreadMessageCount(typeUuid,aggregateList);
 
-							DecoratedTopicInfo dTopicInfo = new DecoratedTopicInfo(topic.getId(), topic.getTitle(),totalUnreadMessages, totalNoMessages, typeUuid);
+							DecoratedTopicInfo dTopicInfo = new DecoratedTopicInfo(
+									topic.getId(), topic.getTitle(),totalUnreadMessages, totalNoMessages, typeUuid, 
+									topic.getBaseForum().getId(), topic.getShortDescription(), "");
 							dForum.addTopic(dTopicInfo);
 						}          
 
@@ -324,14 +500,16 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 				} 
 
 				dForums.add(dForum);
-			}else if ((siteId != null && !"".equals(siteId)) || (forumId != null && !"".equals(forumId))) {
+				
+			} else if ((siteId != null && !"".equals(siteId)) || (forumId != null && !"".equals(forumId))) {
 
 				List<DiscussionForum> forums = new ArrayList<DiscussionForum>();
 				if(forumId != null && !"".equals(forumId)){
 					DiscussionForum forum = forumManager.getForumByIdWithTopics(new Long(forumId));
 					siteId = forumManager.getContextForForumById(forum.getId());
 					forums.add(forum);
-				}else{
+				
+				} else {
 					forums = forumManager.getDiscussionForumsByContextId(siteId);
 				}
 
@@ -355,16 +533,19 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 													getUiPermissionsManager().isModeratePostings(topic.getId(), forum.getLocked(), forum.getDraft(), topic.getLocked(), topic.getDraft(), userId, siteId))){
 
 										unreadMessages = getMessageManager().findUnreadMessageCountByTopicIdByUserId(topic.getId(), userId);										
-									}
-									else
-									{	
+									
+									} else {	
 										// b/c topic is moderated and user does not have mod perm, user may only
 										// see approved msgs or pending/denied msgs authored by user
 										unreadMessages = getMessageManager().findUnreadViewableMessageCountByTopicIdByUserId(topic.getId(), userId);
 									}
+									
 									totalMessages = getMessageManager().findViewableMessageCountByTopicIdByUserId(topic.getId(), userId);
-
-									dForum.addTopic(new DecoratedTopicInfo(topic.getId(), topic.getTitle(), unreadMessages, totalMessages, ""));
+									topic.setBaseForum(forum);
+									
+									dForum.addTopic(
+											new DecoratedTopicInfo(topic.getId(), topic.getTitle(), unreadMessages, totalMessages, "", 
+													topic.getBaseForum().getId(), topic.getShortDescription(), ""));
 									viewableTopics++;
 								}						  
 							}
@@ -454,6 +635,8 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
         return holder;
     }
     
+
+    
     public static class ForumSearch{
     	public String forumId;
     	public String siteId;
@@ -463,14 +646,13 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
             this.locationReference = locationReference;
         }
     }
-
+	
 	public String[] getHandledOutputFormats() {
-		return new String[] { Formats.HTML, Formats.XML, Formats.JSON };
+		return new String[] { Formats.FORM, Formats.XML, Formats.JSON };
 	}
 
 	public String[] getHandledInputFormats() {
-		// TODO Auto-generated method stub
-		return null;
+		return new String[] { Formats.XML, Formats.JSON, Formats.HTML };
 	}
 
 	public UIPermissionsManager getUiPermissionsManager() {
@@ -529,6 +711,7 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 		{		  
 			Tmp="en";		  
 		}
+
 
 		return Tmp;	  
 	}

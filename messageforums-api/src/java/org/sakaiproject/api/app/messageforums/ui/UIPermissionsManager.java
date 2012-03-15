@@ -49,18 +49,21 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isNewTopic(DiscussionForum forum);
+  public boolean isNewTopic(DiscussionForum forum, String contextId);
 
   /**
    * @param topic
    * @return
    */
   public boolean isNewResponse(DiscussionTopic topic, DiscussionForum forum);
+  public boolean isNewResponse(DiscussionTopic topic, DiscussionForum forum, String contextId);
 
   /**
    * @param topic
    * @return
    */
   public boolean isNewResponseToResponse(DiscussionTopic topic, DiscussionForum forum);
+  public boolean isNewResponseToResponse(DiscussionTopic topic, DiscussionForum forum, String contextId);
 
   /**
    * @param topic
@@ -82,7 +85,6 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum, String userId);
-
   /**
    * @param topic
    * @return
@@ -117,12 +119,14 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isDeleteAny(DiscussionTopic topic, DiscussionForum forum);
-
+  public boolean isDeleteAny(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId);
+  
   /**
    * @param topic
    * @return
    */
   public boolean isDeleteOwn(DiscussionTopic topic, DiscussionForum forum);
+  public boolean isDeleteOwn(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId);
 
   /**
    * @param topic

@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 <beans>
+
+    <bean id="hibernateInterceptor" class="org.springframework.orm.hibernate3.HibernateInterceptor">
+        <property name="sessionFactory" ref="org.sakaiproject.springframework.orm.hibernate.GlobalSessionFactory" />
+    </bean>
+    
     <bean id="org.sakaiproject.springframework.orm.hibernate.impl.AdditionalHibernateMappingsImpl.messageforum" 
           class="org.sakaiproject.springframework.orm.hibernate.impl.AdditionalHibernateMappingsImpl">
         <property name="mappingResources">
@@ -107,7 +112,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
     
     <bean id="org.sakaiproject.api.app.messageforums.DefaultPermissionsManager" class="org.sakaiproject.component.app.messageforums.DefaultPermissionsManagerImpl"   init-method="init">
@@ -184,7 +191,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
 
     <bean id="org.sakaiproject.api.app.messageforums.AreaManager" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -220,7 +229,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
 
 	<bean id="org.sakaiproject.api.app.messageforums.MessageForumsForumManager"
@@ -253,7 +264,9 @@
 			<props>
 				<prop key="*">PROPAGATION_REQUIRED</prop>
 			</props>
-		</property>		
+		</property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
 	</bean>
 
     <bean id="org.sakaiproject.api.app.messageforums.MessageForumsMessageManager" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -289,7 +302,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
     
     <bean id="org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -331,15 +346,20 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
        
-    <bean id="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+    <bean id="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" 
+    	class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager">
             <ref bean="org.sakaiproject.springframework.orm.hibernate.GlobalTransactionManager"/>
         </property>
         <property name="target">
             <bean class="org.sakaiproject.component.app.messageforums.ui.DiscussionForumManagerImpl" singleton="true" init-method="init">
+                <lookup-method name="uiPermissionsManager" 
+                	bean="org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager" />
                 <property name="sessionFactory">
                     <ref bean="org.sakaiproject.springframework.orm.hibernate.GlobalSessionFactory"/>
                 </property>
@@ -388,7 +408,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
     
     <bean id="org.sakaiproject.api.app.messageforums.MessageForumsUserManager" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -415,7 +437,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
     
     <bean id="org.sakaiproject.api.app.messageforums.MembershipManager" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -451,7 +475,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
     
     <bean id="org.sakaiproject.api.app.messageforums.UserPreferencesManager"
@@ -493,6 +519,9 @@
         </property>
         <property name="messageManager">
             <ref bean="org.sakaiproject.api.app.messageforums.MessageForumsMessageManager"/>
+        </property>
+        <property name="serverConfigurationService">
+            <ref bean="org.sakaiproject.component.api.ServerConfigurationService" />
         </property>
     </bean>
 
@@ -562,7 +591,9 @@
             <props>
                 <prop key="*">PROPAGATION_REQUIRED</prop>
             </props>
-        </property> 
+        </property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
  		
 	<bean id="org.sakaiproject.api.app.messageforums.ForumScheduleNotification" class="org.sakaiproject.component.app.messageforums.ForumScheduleNotificationImpl">
@@ -612,7 +643,9 @@
  			<props>
  				<prop key="*">PROPAGATION_REQUIRED</prop>
  			</props>
- 		</property>	
+ 		</property>
+        <property name="preInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
+        <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
  
  	</bean>
  

@@ -863,7 +863,7 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
     }
 
     public void saveDiscussionForum(DiscussionForum forum, boolean draft) {
-    	saveDiscussionForum(forum, draft, false);
+    	saveDiscussionForum(forum, draft, false, getContextId());
     }
     
     public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent) {
@@ -928,9 +928,15 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
         
         if (logEvent) {
         	if (isNew) {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_ADD, getEventMessage(forum), false));
+        		eventTrackingService.post(
+        				eventTrackingService.newEvent(
+        						DiscussionForumService.EVENT_FORUMS_FORUM_ADD, 
+        						getEventMessage(forum, getContextId()), false));
         	} else {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, getEventMessage(forum), false));
+        		eventTrackingService.post(
+        				eventTrackingService.newEvent(
+        						DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, 
+        						getEventMessage(forum, forum.getArea().getContextId()), false));
         	}
         }
 
@@ -1167,8 +1173,12 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
      * Delete a discussion forum topic
      */
     public void deleteDiscussionForumTopic(DiscussionTopic topic) {
-        long id = topic.getId().longValue();
-        eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REMOVE, getEventMessage(topic), false));
+
+        Topic finder = getTopicById(true, topic.getId());
+        BaseForum forum = finder.getBaseForum();
+        String siteId = forum.getArea().getContextId();
+        
+        eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REMOVE, getEventMessage(topic, siteId), false));
         try {
             getSession().evict(topic);
         } catch (Exception e) {
@@ -1176,12 +1186,11 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
             LOG.error("could not evict topic: " + topic.getId(), e);
         }
         
-        Topic finder = getTopicById(true, topic.getId());
-        BaseForum forum = finder.getBaseForum();
         forum.removeTopic(topic);
         getHibernateTemplate().saveOrUpdate(forum);
         
         //getHibernateTemplate().delete(topic);
+        long id = topic.getId().longValue();
         LOG.debug("deleteDiscussionForumTopic executed with topicId: " + id);
     }
 

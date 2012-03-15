@@ -52,7 +52,7 @@ public interface MessageForumsMessageManager {
     public void saveMessage(Message message, boolean logEvent, boolean ignoreLockedTopicForum);
 
     public void deleteMessage(Message message);
-
+    
     public Message getMessageById(Long messageId);
     
     public Message getMessageByIdWithAttachments(Long messageId);

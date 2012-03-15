@@ -38,6 +38,7 @@ import org.sakaiproject.api.app.messageforums.Area;
 import org.sakaiproject.api.app.messageforums.AreaControlPermission;
 import org.sakaiproject.api.app.messageforums.AreaManager;
 import org.sakaiproject.api.app.messageforums.Attachment;
+import org.sakaiproject.api.app.messageforums.BaseForum;
 import org.sakaiproject.api.app.messageforums.DBMembershipItem;
 import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionForumService;
@@ -51,6 +52,7 @@ import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsUser;
 import org.sakaiproject.api.app.messageforums.MessagePermissions;
+import org.sakaiproject.api.app.messageforums.OpenForum;
 import org.sakaiproject.api.app.messageforums.PermissionLevel;
 import org.sakaiproject.api.app.messageforums.PermissionLevelManager;
 import org.sakaiproject.api.app.messageforums.PermissionManager;
@@ -90,44 +92,182 @@ import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 /**
  * @author <a href="mailto:rshastri@iupui.edu">Rashmi Shastri</a>
  */
-public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
+public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     DiscussionForumManager {
+	
   private static final String MC_DEFAULT = "mc.default.";
   private static final Log LOG = LogFactory
       .getLog(DiscussionForumManagerImpl.class);
-  private AreaManager areaManager;
-  private MessageForumsForumManager forumManager;
-  private MessageForumsMessageManager messageManager;
-  private DummyDataHelperApi helper;
-  private PermissionManager permissionManager;
-  private MessageForumsTypeManager typeManager;
-  private SiteService siteService;
-  private UserDirectoryService userDirectoryService;
-  private MembershipManager membershipManager;
-  private SecurityService securityService;
-  private SessionManager sessionManager;
-  private PermissionLevelManager permissionLevelManager;
+  
   private Map courseMemberMap = null;
   private boolean usingHelper = false; // just a flag until moved to database from helper
-  private ContentHostingService contentHostingService;
-  private UIPermissionsManager permissionsManager;
-  private EntityBroker entityBroker;
   
   public static final int MAX_NUMBER_OF_SQL_PARAMETERS_IN_LIST = 1000;
+  
+  private static final String INSUFFICIENT_PRIVILEAGES_TO_POST_THREAD = 
+		  "cdfm_insufficient_privileges_post_thread"; 
+  private static final String FORUM_LOCKED = "cdfm_forum_locked";
+  private static final String TOPIC_LOCKED = "cdfm_topic_locked";
+  
+  
+  	//start injection
+  
+  	/**
+  	 * @param forumManager
+  	 */
+  	private MessageForumsForumManager forumManager;
+  	public void setForumManager(MessageForumsForumManager forumManager) {
+  		if (LOG.isDebugEnabled()) {
+  			LOG.debug("setForumManager(MessageForumsForumManager" + forumManager + ")");
+  		}
+  		this.forumManager = forumManager;
+  	}
+  
+  	/**
+  	 * @param areaManager
+  	 */
+  	private AreaManager areaManager;
+  	public void setAreaManager(AreaManager areaManager) {
+  		if (LOG.isDebugEnabled()) {
+  			LOG.debug("setAreaManager(AreaManager" + areaManager + ")");
+  		}
+  		this.areaManager = areaManager;
+  	}
+  	
+    /**
+     * @param permissionManager
+     *          The permissionManager to set.
+     */
+  	private PermissionManager permissionManager;
+    public void setPermissionManager(PermissionManager permissionManager) {
+    	if (LOG.isDebugEnabled()) {
+    		LOG.debug("setPermissionManager(PermissionManager" + permissionManager + ")");
+    	}
+    	this.permissionManager = permissionManager;
+    }
+    
+    private EntityBroker entityBroker;
+    public void setEntityBroker(EntityBroker entityBroker) {
+  	  	this.entityBroker = entityBroker;
+    }
+    
+    private ContentHostingService contentHostingService;
+    public void setContentHostingService(ContentHostingService contentHostingService) {
+  		this.contentHostingService = contentHostingService;
+  	}
+    
+    /**
+     * @param permissionLevelManager
+     *          The permissionLevelManager to set.
+     */
+    private PermissionLevelManager permissionLevelManager;
+    public void setPermissionLevelManager(PermissionLevelManager permissionLevelManager) {
+    	this.permissionLevelManager = permissionLevelManager;
+    }
+    
+    //private UIPermissionsManager permissionsManager;
+    //public void setUIPermissionsManager(UIPermissionsManager permissionsManager) {
+  	//	this.permissionsManager = permissionsManager;
+  	//}
+    
+    /**
+  	 * @return the UIPermissionsManager collaborator.
+  	 */
+  	protected abstract UIPermissionsManager uiPermissionsManager();
+    
+    /**
+     * @param typeManager
+     *          The typeManager to set.
+     */
+    private MessageForumsTypeManager typeManager;
+    public void setTypeManager(MessageForumsTypeManager typeManager) {
+    	if (LOG.isDebugEnabled()) {
+    		LOG.debug("setTypeManager(MessageForumsTypeManager" + typeManager + ")");
+    	}
+    	this.typeManager = typeManager;
+    }
+    
+    /**
+     * @param siteService
+     *          The siteService to set.
+     */
+    private SiteService siteService;
+    public void setSiteService(SiteService siteService) {
+    	this.siteService = siteService;
+    }
+    
+    /**
+     * @param sessionManager
+     *          The sessionManager to set.
+     */
+    private SessionManager sessionManager;
+    public void setSessionManager(SessionManager sessionManager) {
+    	this.sessionManager = sessionManager;
+    }
+
+    /**
+     * @param securityService
+     *          The securityService to set.
+     */
+    private SecurityService securityService;
+    public void setSecurityService(SecurityService securityService) {
+    	this.securityService = securityService;
+    }
+
+    /**
+     * @param userDirectoryService
+     *          The userDirectoryService to set.
+     */
+    private UserDirectoryService userDirectoryService;
+    public void setUserDirectoryService(UserDirectoryService userDirectoryService) {
+    	this.userDirectoryService = userDirectoryService;
+    }
+
+    /**
+     * @param membershipManager
+     *          The membershipManager to set.
+     */
+    private MembershipManager membershipManager;
+    public void setMembershipManager(MembershipManager membershipManager) {
+    	this.membershipManager = membershipManager;
+    }
+
+    /**
+     * @param messageManager
+     */
+    private MessageForumsMessageManager messageManager;
+    public void setMessageManager(MessageForumsMessageManager messageManager) {
+    	if (LOG.isDebugEnabled()) {
+    		LOG.debug("setMessageManager(MessageForumsMessageManager"
+    				+ messageManager + ")");
+    	}
+    	this.messageManager = messageManager;
+    }
+    public MessageForumsMessageManager getMessageManager() {
+    	LOG.debug("getMessageManager()");
+    	return messageManager;
+    }
+    
+    /**
+     * @param helper
+     */
+    private DummyDataHelperApi helper;
+    public void setHelper(DummyDataHelperApi helper) {
+    	if (LOG.isDebugEnabled()) {
+    		LOG.debug("setHelper(DummyDataHelperApi " + helper + ")");
+    	}
+    	this.helper = helper;
+    }
+
+
+    // end injection
+
 
   public void init()
   {
      LOG.info("init()");
     ;
   }
-  
-  public void setEntityBroker(EntityBroker entityBroker) {
-	  this.entityBroker = entityBroker;
-  }
-  
-  public void setContentHostingService(ContentHostingService contentHostingService) {
-		this.contentHostingService = contentHostingService;
-	}
 
   public List searchTopicMessages(Long topicId, String searchText)
   {
@@ -242,139 +382,6 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 	  return forumManager.getModeratedTopicsInSite(ToolManager.getCurrentPlacement().getContext());
   }
 
-  // start injection
-  /**
-   * @param helper
-   */
-  public void setHelper(DummyDataHelperApi helper)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("setHelper(DummyDataHelperApi " + helper + ")");
-    }
-    this.helper = helper;
-  }
-
-  /**
-   * @param areaManager
-   */
-  public void setAreaManager(AreaManager areaManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("setAreaManager(AreaManager" + areaManager + ")");
-    }
-    this.areaManager = areaManager;
-  }
-
-  /**
-   * @param permissionManager
-   *          The permissionManager to set.
-   */
-  public void setPermissionManager(PermissionManager permissionManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("setPermissionManager(PermissionManager" + permissionManager
-          + ")");
-    }
-    this.permissionManager = permissionManager;
-  }
-
-  /**
-   * @param permissionLevelManager
-   *          The permissionLevelManager to set.
-   */
-  public void setPermissionLevelManager(
-      PermissionLevelManager permissionLevelManager)
-  {
-    this.permissionLevelManager = permissionLevelManager;
-  }
-
-  /**
-   * @param typeManager
-   *          The typeManager to set.
-   */
-  public void setTypeManager(MessageForumsTypeManager typeManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("setTypeManager(MessageForumsTypeManager" + typeManager + ")");
-    }
-    this.typeManager = typeManager;
-  }
-
-  /**
-   * @param siteService
-   *          The siteService to set.
-   */
-  public void setSiteService(SiteService siteService)
-  {
-    this.siteService = siteService;
-  }
-
-  /**
-   * @param sessionManager
-   *          The sessionManager to set.
-   */
-  public void setSessionManager(SessionManager sessionManager)
-  {
-    this.sessionManager = sessionManager;
-  }
-
-  /**
-   * @param securityService
-   *          The securityService to set.
-   */
-  public void setSecurityService(SecurityService securityService)
-  {
-    this.securityService = securityService;
-  }
-
-  /**
-   * @param userDirectoryService
-   *          The userDirectoryService to set.
-   */
-  public void setUserDirectoryService(UserDirectoryService userDirectoryService)
-  {
-    this.userDirectoryService = userDirectoryService;
-  }
-
-  /**
-   * @param membershipManager
-   *          The membershipManager to set.
-   */
-  public void setMembershipManager(MembershipManager membershipManager)
-  {
-    this.membershipManager = membershipManager;
-  }
-
-  /**
-   * @return
-   */
-  public MessageForumsMessageManager getMessageManager()
-  {
-
-    LOG.debug("getMessageManager()");
-
-    return messageManager;
-  }
-
-  /**
-   * @param messageManager
-   */
-  public void setMessageManager(MessageForumsMessageManager messageManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("setMessageManager(MessageForumsMessageManager"
-          + messageManager + ")");
-    }
-    this.messageManager = messageManager;
-  }
-
-  // end injection
-
   /*
    * (non-Javadoc)
    * 
@@ -437,14 +444,20 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     {
       message.setTopic(getTopicById(message.getTopic().getId()));
     }
-    if(this.getAnonRole()==true&&message.getCreatedBy()==null)
+    if (null == message.getCreatedBy() && this.getAnonRole()==true)
     {
     	message.setCreatedBy(".anon");
     }
-    if(this.getAnonRole()==true&&message.getModifiedBy()==null)
+    if (message.getModifiedBy()==null && this.getAnonRole()==true)
     {
     	message.setModifiedBy(".anon");
     }
+    
+    // Topic attached to this message gives LazyInitialisationException on forum.getArea()
+    Topic topic = message.getTopic();
+    BaseForum forum = message.getTopic().getBaseForum();
+    topic.setBaseForum(getForumById(forum.getId()));
+    message.setTopic(topic);
     
     messageManager.saveMessage(message, logEvent, ignoreLockedTopicForum);
   }
@@ -1002,19 +1015,6 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
       return sessionManager.getCurrentSessionUserId();
   }
 
-  /**
-   * @param forumManager
-   */
-  public void setForumManager(MessageForumsForumManager forumManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("setForumManager(MessageForumsForumManager" + forumManager
-          + ")");
-    }
-    this.forumManager = forumManager;
-  }
-
   /*
    * (non-Javadoc)
    * 
@@ -1189,40 +1189,40 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     saveTopic(topic, true);
   }
 
-  private void saveTopic(DiscussionTopic topic, boolean draft)
-  {
+  public void saveTopic(DiscussionTopic topic, boolean draft) {
 	  saveTopic(topic, draft, true);
   }
   
-  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent)
-  {
+  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent) {
 	  saveTopic(topic, draft, logEvent, getCurrentUser());
   }
 
-  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser)
-  {
-    LOG
-        .debug("saveTopic(DiscussionTopic " + topic + ", boolean " + draft
+  public void saveTopic(
+		  DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser) {
+    LOG.debug("saveTopic(DiscussionTopic " + topic + ", boolean " + draft
             + ")");
 
     boolean saveForum = topic.getId() == null;
     
     topic.setDraft(Boolean.valueOf(draft));
-    forumManager.saveDiscussionForumTopic(topic, false, currentUser, logEvent);
+    forumManager.saveDiscussionForumTopic(topic, false, currentUser, true);
     
-    if (saveForum)
-    {
-      DiscussionForum forum = (DiscussionForum) topic.getBaseForum();
-      forum.addTopic(topic);
-      forumManager.saveDiscussionForum(forum, forum.getDraft().booleanValue(), logEvent, currentUser);
-      //sak-5146 forumManager.saveDiscussionForum(forum);
-    }
+    if (saveForum) {
+    	DiscussionForum forum = (DiscussionForum) topic.getBaseForum();
+    	forum.addTopic(topic);
+    	forumManager.saveDiscussionForum(forum, forum.getDraft().booleanValue(), true, currentUser);
+    	//sak-5146 forumManager.saveDiscussionForum(forum);
+    }   
     
-    if(logEvent){
-    	if (topic.getId() == null) {
-    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_ADD, getEventMessage(topic), false));
+	Topic myTopic = getTopicById(topic.getId());
+	BaseForum myForum = myTopic.getBaseForum();
+	String siteId = myForum.getArea().getContextId();
+	
+    if (logEvent) {
+    	if (saveForum) {
+    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_ADD, getEventMessage(topic, siteId), false));
     	} else {
-    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REVISE, getEventMessage(topic), false));
+    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REVISE, getEventMessage(topic, siteId), false));
     	}
     }
 
@@ -1233,8 +1233,8 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
    * 
    * @see org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager#deleteTopic(org.sakaiproject.api.app.messageforums.DiscussionTopic)
    */
-  public void deleteTopic(DiscussionTopic topic)
-  {
+  public void deleteTopic(DiscussionTopic topic) {
+
     if (LOG.isDebugEnabled())
     {
       LOG.debug("deleteTopic(DiscussionTopic " + topic + ")");
@@ -1457,7 +1457,7 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     return topicControlPermissions;
 
   }
-
+  
   /*
    * (non-Javadoc)
    * 
@@ -1763,9 +1763,8 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 	  return isTopicOwner(topic, userDirectoryService.getCurrentUser().getId());
   }
   
-  public boolean isTopicOwner(DiscussionTopic topic, String userId)
-  {
-	  return isTopicOwner(topic, userId, getContextSiteId());
+  public boolean isTopicOwner(DiscussionTopic topic, String userId) {
+	  return isTopicOwner(topic, userId, getContextForTopicById(topic.getId()));
   }
   
   public boolean isTopicOwner(DiscussionTopic topic, String userId, String siteId)
@@ -2213,30 +2212,24 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     return getContributorAccessorList(iterator);
   }
 
-  public DBMembershipItem getAreaDBMember(Set originalSet, String name,
-      Integer type)
-  {
-    DBMembershipItem newItem = getDBMember(originalSet, name, type);
-    return newItem;
+  public DBMembershipItem getAreaDBMember(Set originalSet, String name, Integer type) {
+    return getDBMember(originalSet, name, type);
   }
   
-  public DBMembershipItem getDBMember(Set originalSet, String name,
-			Integer type) {
+  public DBMembershipItem getDBMember(Set originalSet, String name, Integer type) {
 	  return getDBMember(originalSet, name, type, getContextSiteId());
-	}
+  }
 
   public DBMembershipItem getDBMember(Set originalSet, String name,
-      Integer type, String contextSiteId)
-  {
+      Integer type, String contextSiteId)  {
       	
     DBMembershipItem membershipItem = null;
-    DBMembershipItem membershipItemIter;
     
     if (originalSet != null){
       Iterator iter = originalSet.iterator();
       while (iter.hasNext())
       {
-      	membershipItemIter = (DBMembershipItem) iter.next();
+    	  DBMembershipItem membershipItemIter = (DBMembershipItem) iter.next();
         if (membershipItemIter.getType().equals(type)
             && membershipItemIter.getName().equals(name))
         {
@@ -2288,11 +2281,12 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
         }
       }
     	PermissionLevel noneLevel = permissionLevelManager.getDefaultNonePermissionLevel();
+    	
       membershipItem = new DBMembershipItemImpl();
       membershipItem.setName(name);
       membershipItem.setPermissionLevelName((level == null) ? noneLevel.getName() : level.getName() );
       membershipItem.setType(type);
-      membershipItem.setPermissionLevel((level == null) ? noneLevel : level);      
+      membershipItem.setPermissionLevel((level == null) ? noneLevel : level); 
     }        
     return membershipItem;
   }
@@ -2407,18 +2401,23 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 		return forumManager.getNumModTopicCurrentUserHasModPermForWithPermissionLevelName(membershipList);
 	}
 
-    private String getEventMessage(Object object) {
-    	String eventMessagePrefix = "";
-    	final String toolId = ToolManager.getCurrentTool().getId();
+    private String getEventMessage(Object object, String siteId) {
     	
-    		if (toolId.equals(DiscussionForumService.MESSAGE_CENTER_ID))
+    	String eventMessagePrefix = "";
+    	String contextSiteId = "/site/" + siteId;
+    	if (null == siteId) {
+    		String contextId = ToolManager.getCurrentTool().getId();
+    		contextSiteId = getContextSiteId();
+    
+    		if (contextId.equals(DiscussionForumService.MESSAGE_CENTER_ID))
     			eventMessagePrefix = "/messagesAndForums";
-    		else if (toolId.equals(DiscussionForumService.MESSAGES_TOOL_ID))
+    		else if (contextId.equals(DiscussionForumService.MESSAGES_TOOL_ID))
     			eventMessagePrefix = "/messages";
     		else
     			eventMessagePrefix = "/forums";
+    	}
     	
-    	return eventMessagePrefix + getContextSiteId() + "/" + object.toString() + "/" + sessionManager.getCurrentSessionUserId();
+    	return eventMessagePrefix + contextSiteId + "/" + object.toString() + "/" + sessionManager.getCurrentSessionUserId();
     }
 
     public String getContextForTopicById(Long topicId) {
@@ -2527,5 +2526,80 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 	public List<Attachment> getTopicAttachments(Long topicId) {
 		return forumManager.getTopicAttachments(topicId);
 	}
-       
+	
+	/**
+	 * 
+	 */
+	public List getTopicMembershipItems(String siteId) {
+		
+		Area area = getDiscussionForumArea(siteId);
+	    Set<DBMembershipItem> membershipItems = 
+	    		uiPermissionsManager().getAreaItemsSet(area);
+	    
+	    List<DBMembershipItem> topicDBMembershipItems = new ArrayList<DBMembershipItem>();
+	    
+	    for (DBMembershipItem item : membershipItems) {
+	    	
+			DBMembershipItem dbMembershipItem = permissionLevelManager.createDBMembershipItem(
+					item.getName(), item.getPermissionLevelName(), item.getType());
+
+			dbMembershipItem.setPermissionLevel(item.getPermissionLevel());
+			
+			// save DBMembershiptItem here to get an id so we can add to the set
+			permissionLevelManager.saveDBMembershipItem(dbMembershipItem);         
+	    	
+	    	topicDBMembershipItems.add(dbMembershipItem);
+	    }
+
+	    return topicDBMembershipItems;
+	}
+	
+	public boolean canUserPostMessage(Long topicId, String methodCalled) {
+		
+		DiscussionTopic dTopic = getTopicById(topicId);
+		if (dTopic == null) {
+		    LOG.debug("selectedTopic is null in " + methodCalled);
+			return false;
+		}
+		
+		DiscussionForum dForum = (DiscussionForum)dTopic.getBaseForum();
+		if (dForum == null) {
+		    LOG.debug("selectedForum is null in " + methodCalled);
+			return false;
+		}
+			  
+		if (!getIsNewResponse(dTopic, dForum) && 
+				!getIsNewResponseToResponse(dTopic, dForum)) {
+			throw new SecurityException(
+					"Insufficient privileages for user to post to topic: " + dTopic.getTitle());
+			
+		} else if(dTopic.getLocked()) {
+			throw new SecurityException(
+					"Could not create entity : Topic is locked: " + dTopic.getTitle());
+			
+		} else if(dForum.getLocked()) {
+			throw new SecurityException(
+					"Could not create entity : Forum is locked: " + dTopic.getTitle());
+		}
+
+		return true;
+	}
+	
+	/**
+	 * @return
+	 */
+	private boolean getIsNewResponse(DiscussionTopic topic, DiscussionForum forum) {
+		Area area = forum.getArea();
+		String contextId = area.getContextId();
+	    return uiPermissionsManager().isNewResponse(topic, forum, contextId);
+	}
+
+	/**
+	 * @return
+	 */
+	private boolean getIsNewResponseToResponse(DiscussionTopic topic, DiscussionForum forum) {
+		Area area = forum.getArea();
+		String contextId = area.getContextId();
+	    return uiPermissionsManager().isNewResponseToResponse(topic, forum, contextId);
+	}
 }

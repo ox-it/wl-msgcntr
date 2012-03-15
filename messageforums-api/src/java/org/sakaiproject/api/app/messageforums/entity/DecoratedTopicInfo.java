@@ -6,7 +6,12 @@ public class DecoratedTopicInfo{
 	private int unreadMessagesCount = 0;
 	private int messagesCount = 0;
 	private String typeUuid;
-	
+	private Long forumId;
+	private String topicShortDescription;
+	private String topicExtendedDescription;
+
+	public DecoratedTopicInfo() {
+	}
 	public String getTypeUuid() {
 		return typeUuid;
 	}
@@ -15,12 +20,15 @@ public class DecoratedTopicInfo{
 		this.typeUuid = typeUuid;
 	}
 
-	public DecoratedTopicInfo(Long topicId, String topicTitle, int unreadMessagesCount, int messagesCount, String typeUuid){
+	public DecoratedTopicInfo(Long topicId, String topicTitle, int unreadMessagesCount, int messagesCount, String typeUuid, Long forumId, String topicShortDescription, String topicExtendedDescription){
 		this.topicId = topicId;
 		this.topicTitle = topicTitle;
 		this.unreadMessagesCount = unreadMessagesCount;
 		this.messagesCount = messagesCount;
 		this.typeUuid = typeUuid;
+		this.forumId = forumId;
+		this.topicShortDescription = topicShortDescription;
+		this.topicExtendedDescription = topicExtendedDescription;
 	}
 	
 	public Long getTopicId() {
@@ -51,4 +59,25 @@ public class DecoratedTopicInfo{
 		this.messagesCount = messagesCount;
 	}
 
+
+	public Long getForumId() {
+		return forumId;
+	}
+	public void setForumId(Long forumId) {
+		this.forumId = forumId;
+	}
+
+	public String getTopicShortDescription() {
+		return topicShortDescription;
+	}
+	public void setTopicShortDescription(String topicShortDescription) {
+		this.topicShortDescription = topicShortDescription;
+	}
+
+	public String getTopicExtendedDescription() {
+		return topicExtendedDescription;
+	}
+	public void setTopicDescription(String topicExtendedDescription) {
+		this.topicExtendedDescription = topicExtendedDescription;
+	}
 }
