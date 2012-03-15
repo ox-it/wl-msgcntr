@@ -66,7 +66,6 @@ import org.sakaiproject.authz.api.Role;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.authz.cover.AuthzGroupService;
 import org.sakaiproject.component.app.messageforums.MembershipItem;
-import org.sakaiproject.component.app.messageforums.TestUtil;
 import org.sakaiproject.component.app.messageforums.dao.hibernate.ActorPermissionsImpl;
 import org.sakaiproject.component.app.messageforums.dao.hibernate.DBMembershipItemImpl;
 import org.sakaiproject.component.app.messageforums.dao.hibernate.MessageForumsUserImpl;
@@ -92,7 +91,7 @@ import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 /**
  * @author <a href="mailto:rshastri@iupui.edu">Rashmi Shastri</a>
  */
-public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
+public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     DiscussionForumManager {
   private static final String MC_DEFAULT = "mc.default.";
   private static final Log LOG = LogFactory
@@ -282,6 +281,11 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     }
     this.permissionManager = permissionManager;
   }
+  
+  /**
+	 * @return the UIPermissionsManager collaborator.
+	 */
+	protected abstract UIPermissionsManager uiPermissionsManager();
 
   /**
    * @param permissionLevelManager
@@ -422,10 +426,10 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
    * @see org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager#saveMessage(org.sakaiproject.api.app.messageforums.Message)
    */
   public void saveMessage(Message message) {
-	  saveMessage(message, true);
+	  saveMessage(message, null);
   }
   
-  public void saveMessage(Message message, boolean logEvent)
+  public void saveMessage(Message message, String siteId)
   {
     if (LOG.isDebugEnabled())
     {
@@ -435,16 +439,16 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     {
       message.setTopic(getTopicById(message.getTopic().getId()));
     }
-    if(this.getAnonRole()==true&&message.getCreatedBy()==null)
+    if (null == message.getCreatedBy() && this.getAnonRole()==true)
     {
     	message.setCreatedBy(".anon");
     }
-    if(this.getAnonRole()==true&&message.getModifiedBy()==null)
+    if (message.getModifiedBy()==null && this.getAnonRole()==true)
     {
     	message.setModifiedBy(".anon");
     }
     
-    messageManager.saveMessage(message, logEvent);
+    messageManager.saveMessage(message, siteId);
   }
 
   /*
@@ -1189,18 +1193,15 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     saveTopic(topic, true);
   }
 
-  private void saveTopic(DiscussionTopic topic, boolean draft)
-  {
-	  saveTopic(topic, draft, true);
+  public void saveTopic(DiscussionTopic topic, boolean draft) {
+	  saveTopic(topic, draft, true, getCurrentUser(), null);
   }
   
-  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent)
-  {
-	  saveTopic(topic, draft, logEvent, getCurrentUser());
+  public void saveTopic(DiscussionTopic topic, boolean draft, String siteId) {
+	  saveTopic(topic, draft, true, getCurrentUser(), siteId);
   }
 
-  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser)
-  {
+  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser, String siteId) {
     LOG
         .debug("saveTopic(DiscussionTopic " + topic + ", boolean " + draft
             + ")");
@@ -1208,31 +1209,31 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     boolean saveForum = topic.getId() == null;
     topic.setAvailability(ForumScheduleNotificationCover.makeAvailableHelper(topic.getAvailabilityRestricted(), topic.getOpenDate(), topic.getCloseDate()));
     topic.setDraft(Boolean.valueOf(draft));
-    forumManager.saveDiscussionForumTopic(topic, false, currentUser, logEvent);
+    forumManager.saveDiscussionForumTopic(topic, false, currentUser, true);
     Long topicId = topic.getId();
-    if(topicId == null){
+    if (topicId == null) {
     	Topic topicTmp = forumManager.getTopicByUuid(topic.getUuid());
-    	if(topicTmp != null){
+    	if (topicTmp != null) {
     		topicId = topicTmp.getId();
     	}
     }
-    if(topicId != null){
+    if (topicId != null) {
     	ForumScheduleNotificationCover.scheduleAvailability(topic);
     }
     
-    if (saveForum)
-    {
-      DiscussionForum forum = (DiscussionForum) topic.getBaseForum();
-      forum.addTopic(topic);
-      forumManager.saveDiscussionForum(forum, forum.getDraft().booleanValue(), logEvent, currentUser);
-      //sak-5146 forumManager.saveDiscussionForum(forum);
-    }
     
-    if(logEvent){
+    if (saveForum) {
+    	DiscussionForum forum = (DiscussionForum) topic.getBaseForum();
+    	forum.addTopic(topic);
+    	forumManager.saveDiscussionForum(forum, forum.getDraft().booleanValue(), true, currentUser, siteId);
+    	//sak-5146 forumManager.saveDiscussionForum(forum);
+    }   
+    
+    if (logEvent) {
     	if (topic.getId() == null) {
-    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_ADD, getEventMessage(topic), false));
+    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_ADD, getEventMessage(topic, siteId), false));
     	} else {
-    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REVISE, getEventMessage(topic), false));
+    		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REVISE, getEventMessage(topic, siteId), false));
     	}
     }
 
@@ -1243,13 +1244,17 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
    * 
    * @see org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager#deleteTopic(org.sakaiproject.api.app.messageforums.DiscussionTopic)
    */
-  public void deleteTopic(DiscussionTopic topic)
+  public void deleteTopic(DiscussionTopic topic) {
+	  deleteTopic(topic, null);
+  }
+  
+  public void deleteTopic(DiscussionTopic topic, String siteId)
   {
     if (LOG.isDebugEnabled())
     {
       LOG.debug("deleteTopic(DiscussionTopic " + topic + ")");
     }
-    forumManager.deleteDiscussionForumTopic(topic);
+    forumManager.deleteDiscussionForumTopic(topic, siteId);
   }
 
   /*
@@ -1467,7 +1472,7 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     return topicControlPermissions;
 
   }
-
+  
   /*
    * (non-Javadoc)
    * 
@@ -2221,30 +2226,24 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     return getContributorAccessorList(iterator);
   }
 
-  public DBMembershipItem getAreaDBMember(Set originalSet, String name,
-      Integer type)
-  {
-    DBMembershipItem newItem = getDBMember(originalSet, name, type);
-    return newItem;
+  public DBMembershipItem getAreaDBMember(Set originalSet, String name, Integer type) {
+    return getDBMember(originalSet, name, type);
   }
   
-  public DBMembershipItem getDBMember(Set originalSet, String name,
-			Integer type) {
+  public DBMembershipItem getDBMember(Set originalSet, String name, Integer type) {
 	  return getDBMember(originalSet, name, type, getContextSiteId());
-	}
+  }
 
   public DBMembershipItem getDBMember(Set originalSet, String name,
-      Integer type, String contextSiteId)
-  {
+      Integer type, String contextSiteId)  {
       	
     DBMembershipItem membershipItem = null;
-    DBMembershipItem membershipItemIter;
     
     if (originalSet != null){
       Iterator iter = originalSet.iterator();
       while (iter.hasNext())
       {
-      	membershipItemIter = (DBMembershipItem) iter.next();
+    	  DBMembershipItem membershipItemIter = (DBMembershipItem) iter.next();
         if (membershipItemIter.getType().equals(type)
             && membershipItemIter.getName().equals(name))
         {
@@ -2296,11 +2295,12 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
         }
       }
     	PermissionLevel noneLevel = permissionLevelManager.getDefaultNonePermissionLevel();
+    	
       membershipItem = new DBMembershipItemImpl();
       membershipItem.setName(name);
       membershipItem.setPermissionLevelName((level == null) ? noneLevel.getName() : level.getName() );
       membershipItem.setType(type);
-      membershipItem.setPermissionLevel((level == null) ? noneLevel : level);      
+      membershipItem.setPermissionLevel((level == null) ? noneLevel : level); 
     }        
     return membershipItem;
   }
@@ -2415,18 +2415,23 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 		return forumManager.getNumModTopicCurrentUserHasModPermForWithPermissionLevelName(membershipList);
 	}
 
-    private String getEventMessage(Object object) {
-    	String eventMessagePrefix = "";
-    	final String toolId = ToolManager.getCurrentTool().getId();
+    private String getEventMessage(Object object, String siteId) {
     	
-    		if (toolId.equals(DiscussionForumService.MESSAGE_CENTER_ID))
+    	String eventMessagePrefix = "";
+    	String contextSiteId = "/site/" + siteId;
+    	if (null == siteId) {
+    		String contextId = ToolManager.getCurrentTool().getId();
+    		contextSiteId = getContextSiteId();
+    
+    		if (contextId.equals(DiscussionForumService.MESSAGE_CENTER_ID))
     			eventMessagePrefix = "/messagesAndForums";
-    		else if (toolId.equals(DiscussionForumService.MESSAGES_TOOL_ID))
+    		else if (contextId.equals(DiscussionForumService.MESSAGES_TOOL_ID))
     			eventMessagePrefix = "/messages";
     		else
     			eventMessagePrefix = "/forums";
+    	}
     	
-    	return eventMessagePrefix + getContextSiteId() + "/" + object.toString() + "/" + sessionManager.getCurrentSessionUserId();
+    	return eventMessagePrefix + contextSiteId + "/" + object.toString() + "/" + sessionManager.getCurrentSessionUserId();
     }
 
     public String getContextForTopicById(Long topicId) {
@@ -2535,5 +2540,32 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 	public List<Attachment> getTopicAttachments(Long topicId) {
 		return forumManager.getTopicAttachments(topicId);
 	}
-       
+	
+	/**
+	 * 
+	 */
+	public List getTopicMembershipItems(String siteId) {
+		
+		Area area = getDiscussionForumArea(siteId);
+	    Set<DBMembershipItem> membershipItems = 
+	    		uiPermissionsManager().getAreaItemsSet(area);
+	    
+	    List<DBMembershipItem> topicDBMembershipItems = new ArrayList<DBMembershipItem>();
+	    
+	    for (DBMembershipItem item : membershipItems) {
+	    	
+			DBMembershipItem dbMembershipItem = permissionLevelManager.createDBMembershipItem(
+					item.getName(), item.getPermissionLevelName(), item.getType());
+
+			dbMembershipItem.setPermissionLevel(item.getPermissionLevel());
+			
+			// save DBMembershiptItem here to get an id so we can add to the set
+			permissionLevelManager.saveDBMembershipItem(dbMembershipItem);         
+	    	
+	    	topicDBMembershipItems.add(dbMembershipItem);
+	    }
+
+	    return topicDBMembershipItems;
+	}
+
 }

@@ -40,8 +40,12 @@ public interface MessageForumsMessageManager {
     public void saveMessage(Message message);
 
     public void saveMessage(Message message, boolean logEvent);
+    
+    public void saveMessage(Message message, String siteId);
 
     public void deleteMessage(Message message);
+    
+    public void deleteMessage(Message message, String siteId);
 
     public Message getMessageById(Long messageId);
     

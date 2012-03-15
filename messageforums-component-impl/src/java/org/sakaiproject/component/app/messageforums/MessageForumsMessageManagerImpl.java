@@ -864,7 +864,7 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
             	if (message.getTopic().getBaseForum()==null && message.getTopic().getOpenForum() != null) 	 
                     message.getTopic().setBaseForum((BaseForum) message.getTopic().getOpenForum()); 	 
 	 
-            	this.saveMessage(message, true, toolId, userId, context, true);
+            	this.saveMessage(message, toolId, userId, context, true);
 
         	if (isMessageFromForums)
         		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_READ, getEventMessage(message, toolId, userId, context), false));
@@ -1071,18 +1071,22 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
     }
 
     public void saveMessage(Message message) {
-    	saveMessage(message, true);
+    	saveMessage(message, ToolManager.getCurrentTool().getId(), getCurrentUser(), getContextId(), true);
+    }
+    
+    public void saveMessage(Message message, boolean logEvent) {
+    	saveMessage(message, null, getCurrentUser(), null, logEvent);
     }
 
-    public void saveMessage(Message message, boolean logEvent) {
-    	saveMessage(message, logEvent, ToolManager.getCurrentTool().getId(), getCurrentUser(), getContextId());
+    public void saveMessage(Message message, String siteId) {
+    	saveMessage(message, null, getCurrentUser(), siteId, true);
     }
     
-    public void saveMessage(Message message, boolean logEvent, String toolId, String userId, String contextId){
-    	saveMessage(message, logEvent, toolId, userId, contextId, false);
+    public void saveMessage(Message message, String toolId, String userId, String contextId, boolean logEvent){
+    	saveMessage(message, toolId, userId, contextId, logEvent, false);
     }
     
-    public void saveMessage(Message message, boolean logEvent, String toolId, String userId, String contextId, boolean ignoreLockedTopicForum){
+    public void saveMessage(Message message, String toolId, String userId, String contextId, boolean logEvent, boolean ignoreLockedTopicForum){
         boolean isNew = message.getId() == null;
         
         if (!ignoreLockedTopicForum && !(message instanceof PrivateMessage)){                  
@@ -1147,15 +1151,19 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
         		if (isMessageFromForums(message))
         			eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_RESPONSE, getEventMessage(message, toolId, userId, contextId), false));
         		else
-        			eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_MESSAGES_RESPONSE, getEventMessage(message, toolId, userId, contextId), false));
-        	}           
-        }
+        			eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_MESSAGES_RESPONSE, getEventMessage(message, toolId, userId, contextId), false));         
+        	}
+        	}
         
         LOG.info("message " + message.getId() + " saved successfully");
         
     }
 
     public void deleteMessage(Message message) {
+    	deleteMessage(message, null);
+    }
+    
+    public void deleteMessage(Message message, String siteId) {
         long id = message.getId().longValue();
         message.setInReplyTo(null);
         
@@ -1168,11 +1176,20 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
         	e.printStackTrace();
         }
         
-        if (isMessageFromForums(message))
-        	eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_REMOVE, getEventMessage(message), false));
-        else
-        	eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_MESSAGES_REMOVE, getEventMessage(message), false));
-
+        if (isMessageFromForums(message)) {
+        	eventTrackingService.post(
+        			eventTrackingService.newEvent(
+        					DiscussionForumService.EVENT_FORUMS_REMOVE, 
+        					getEventMessage(message, siteId), 
+        					false));
+        } else {
+        	eventTrackingService.post(
+        			eventTrackingService.newEvent(
+        					DiscussionForumService.EVENT_MESSAGES_REMOVE, 
+        					getEventMessage(message, siteId), 
+        					false));
+        }
+        
         try {
             getSession().evict(message);
         } catch (Exception e) {
@@ -1403,20 +1420,23 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
         return idManager.createUuid();
     }
 
-    private String getEventMessage(Object object) {
-    	return getEventMessage(object, ToolManager.getCurrentTool().getId(), getCurrentUser(), getContextId());
+    private String getEventMessage(Object object, String siteId) {
+    	if (null == siteId) {
+    		return getEventMessage(object, ToolManager.getCurrentTool().getId(), getCurrentUser(), this.getContextId());
+    	}
+    	return getEventMessage(object, null, getCurrentUser(), siteId);
     }
     
     private String getEventMessage(Object object, String toolId, String userId, String contextId) {
-    	String eventMessagePrefix = "";
-    	
+    	String eventMessagePrefix = "/forums/site/";
+    	if (null != toolId) {
     		if (toolId.equals(DiscussionForumService.MESSAGE_CENTER_ID))
     			eventMessagePrefix = "/messagesAndForums/site/";
     		else if (toolId.equals(DiscussionForumService.MESSAGES_TOOL_ID))
     			eventMessagePrefix = "/messages/site/";
     		else
     			eventMessagePrefix = "/forums/site/";
-    	
+    	}
     	return eventMessagePrefix + contextId + "/" + object.toString() + "/" + userId;
     }
 
@@ -1738,4 +1758,5 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
         LOG.debug("about to return");
         return Util.setToList(resultSet); 
 	}
+
 }

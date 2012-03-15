@@ -857,15 +857,15 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
     }
 
     public void saveDiscussionForum(DiscussionForum forum, boolean draft) {
-    	saveDiscussionForum(forum, draft, false);
+    	saveDiscussionForum(forum, draft, false, getContextId());
     }
     
-    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent) {
+    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent, String siteId) {
     	String currentUser = getCurrentUser();
-    	saveDiscussionForum(forum, draft, logEvent, currentUser);
+    	saveDiscussionForum(forum, draft, logEvent, currentUser, siteId);
     }
     
-    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent, String currentUser) {
+    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent, String currentUser, String siteId) {
     
         boolean isNew = forum.getId() == null;
 
@@ -914,9 +914,9 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
 
         if (logEvent) {
         	if (isNew) {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_ADD, getEventMessage(forum), false));
+        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_ADD, getEventMessage(forum, siteId), false));
         	} else {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, getEventMessage(forum), false));
+        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, getEventMessage(forum, siteId), false));
         	}
         }
 
@@ -1127,8 +1127,12 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
      * Delete a discussion forum topic
      */
     public void deleteDiscussionForumTopic(DiscussionTopic topic) {
+    	deleteDiscussionForumTopic(topic, null);
+    }
+    
+    public void deleteDiscussionForumTopic(DiscussionTopic topic, String siteId) {
         long id = topic.getId().longValue();
-        eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REMOVE, getEventMessage(topic), false));
+        eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REMOVE, getEventMessage(topic, siteId), false));
         try {
             getSession().evict(topic);
         } catch (Exception e) {

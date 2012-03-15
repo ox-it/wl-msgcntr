@@ -133,7 +133,7 @@ public DBMembershipItemImpl(){
    */
   public int hashCode()
   {    
-    return id.hashCode();
+    return super.hashCode();
   }
 
 

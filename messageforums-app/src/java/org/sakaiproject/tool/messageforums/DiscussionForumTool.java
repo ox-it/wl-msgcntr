@@ -4826,7 +4826,7 @@ public class DiscussionForumTool
 			  .getTopicByIdWithMessages(selectedTopic.getTopic().getId()));
 
 	  // does the actual save to 'delete' this message
-	  forumManager.saveMessage(message, false);
+	  forumManager.saveMessage(message);
 
 	  // reload the topic, forum and reset the topic's base forum
 	  selectedTopic = getDecoratedTopic(selectedTopic.getTopic());
@@ -5943,7 +5943,7 @@ public class DiscussionForumTool
         msg.setGradeAssignmentName(selectedAssignName);
         msg.setTopic((DiscussionTopic) forumManager
                 .getTopicByIdWithMessages(selectedTopic.getTopic().getId()));
-        forumManager.saveMessage(msg, false);
+        forumManager.saveMessage(msg);
         
         setSuccessMessage(getResourceBundleString(GRADE_SUCCESSFUL));
     } 

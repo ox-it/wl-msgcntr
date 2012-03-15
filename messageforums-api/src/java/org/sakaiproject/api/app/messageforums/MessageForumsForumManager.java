@@ -100,8 +100,8 @@ public interface MessageForumsForumManager {
      */
     public void saveDiscussionForum(DiscussionForum forum);
     public void saveDiscussionForum(DiscussionForum forum, boolean draft);
-    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent);
-    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent, String currentUser);
+    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent, String siteId);
+    public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent, String currentUser, String siteId);
 
 
     /**
@@ -152,6 +152,7 @@ public interface MessageForumsForumManager {
      * Delete a discussion forum topic
      */
     public void deleteDiscussionForumTopic(DiscussionTopic topic);
+    public void deleteDiscussionForumTopic(DiscussionTopic topic, String siteId);
 
     /**
      * Delete an open forum topic

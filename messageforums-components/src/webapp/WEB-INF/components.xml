@@ -336,6 +336,7 @@
         </property>
         <property name="target">
             <bean class="org.sakaiproject.component.app.messageforums.ui.DiscussionForumManagerImpl" singleton="true" init-method="init">
+                <lookup-method name="uiPermissionsManager" bean="org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager" />
                 <property name="sessionFactory">
                     <ref bean="org.sakaiproject.springframework.orm.hibernate.GlobalSessionFactory"/>
                 </property>

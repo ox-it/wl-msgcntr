@@ -73,6 +73,7 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum);
+  public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum, String siteId);
 
   /**
    * @param topic
@@ -141,6 +142,8 @@ public interface UIPermissionsManager
   public Set getAreaItemsSet(Area area);
 
   public Set getForumItemsSet(DiscussionForum forum);
+  public Set getForumItemsSet(DiscussionForum forum, String siteId);
   
   public Set getTopicItemsSet(DiscussionTopic topic);
+  public Set getTopicItemsSet(DiscussionTopic topic, String siteId);
 }
