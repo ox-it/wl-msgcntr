@@ -246,6 +246,7 @@ public class DiscussionForumTool
   private String userId;
   
   private boolean showForumLinksInNav = true;
+  private boolean showProfileInfo = true;
 
   // compose
   private MessageForumsMessageManager messageManager;
@@ -353,6 +354,7 @@ public class DiscussionForumTool
     }
     
     showForumLinksInNav = ServerConfigurationService.getBoolean("mc.showForumLinksInNav", true);
+    showProfileInfo = ServerConfigurationService.getBoolean("profile2.profile.link.enabled", true);
   }
 
   // Is Gradebook defined for the site?
@@ -7853,6 +7855,18 @@ public class DiscussionForumTool
 	{
 		String rv = new Boolean(selectedForum.getMarkupFree()).booleanValue() ?"Minimal":"Default"; 
 		return rv;
+	}
+	
+	public String getServerUrl() {
+		return ServerConfigurationService.getServerUrl();
+	}
+			
+	public boolean getShowProfileInfo() {
+		if (showProfileInfo) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
 
