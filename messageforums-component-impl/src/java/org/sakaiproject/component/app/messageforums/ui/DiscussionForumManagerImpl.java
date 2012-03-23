@@ -38,6 +38,7 @@ import org.sakaiproject.api.app.messageforums.Area;
 import org.sakaiproject.api.app.messageforums.AreaControlPermission;
 import org.sakaiproject.api.app.messageforums.AreaManager;
 import org.sakaiproject.api.app.messageforums.Attachment;
+import org.sakaiproject.api.app.messageforums.BaseForum;
 import org.sakaiproject.api.app.messageforums.DBMembershipItem;
 import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionForumService;
@@ -426,10 +427,10 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
    * @see org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager#saveMessage(org.sakaiproject.api.app.messageforums.Message)
    */
   public void saveMessage(Message message) {
-	  saveMessage(message, null);
+	  saveMessage(message, true);
   }
   
-  public void saveMessage(Message message, String siteId)
+  public void saveMessage(Message message, boolean logEvent)
   {
     if (LOG.isDebugEnabled())
     {
@@ -448,7 +449,13 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
     	message.setModifiedBy(".anon");
     }
     
-    messageManager.saveMessage(message, siteId);
+    // Topic attached to this message gives LazyInitialisationException on forum.getArea()
+    Topic topic = message.getTopic();
+    BaseForum forum = message.getTopic().getBaseForum();
+    topic.setBaseForum(getForumById(forum.getId()));
+    message.setTopic(topic);
+    
+    messageManager.saveMessage(message, logEvent);
   }
 
   /*
@@ -1194,14 +1201,14 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
   }
 
   public void saveTopic(DiscussionTopic topic, boolean draft) {
-	  saveTopic(topic, draft, true, getCurrentUser(), null);
+	  saveTopic(topic, draft, true);
   }
   
-  public void saveTopic(DiscussionTopic topic, boolean draft, String siteId) {
-	  saveTopic(topic, draft, true, getCurrentUser(), siteId);
+  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent) {
+	  saveTopic(topic, draft, logEvent, getCurrentUser());
   }
 
-  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser, String siteId) {
+  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser) {
     LOG
         .debug("saveTopic(DiscussionTopic " + topic + ", boolean " + draft
             + ")");
@@ -1221,11 +1228,17 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
     	ForumScheduleNotificationCover.scheduleAvailability(topic);
     }
     
+    String siteId = null;
+    if (null != topic.getBaseForum()) {
+    	siteId = getContextForForumById(topic.getBaseForum().getId());
+    } else {
+    	siteId = getContextForTopicById(topic.getId());
+    }
     
     if (saveForum) {
     	DiscussionForum forum = (DiscussionForum) topic.getBaseForum();
     	forum.addTopic(topic);
-    	forumManager.saveDiscussionForum(forum, forum.getDraft().booleanValue(), true, currentUser, siteId);
+    	forumManager.saveDiscussionForum(forum, forum.getDraft().booleanValue(), true, currentUser);
     	//sak-5146 forumManager.saveDiscussionForum(forum);
     }   
     
@@ -1245,16 +1258,12 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
    * @see org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager#deleteTopic(org.sakaiproject.api.app.messageforums.DiscussionTopic)
    */
   public void deleteTopic(DiscussionTopic topic) {
-	  deleteTopic(topic, null);
-  }
-  
-  public void deleteTopic(DiscussionTopic topic, String siteId)
-  {
+
     if (LOG.isDebugEnabled())
     {
       LOG.debug("deleteTopic(DiscussionTopic " + topic + ")");
     }
-    forumManager.deleteDiscussionForumTopic(topic, siteId);
+    forumManager.deleteDiscussionForumTopic(topic);
   }
 
   /*
@@ -1777,9 +1786,8 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
 	  return isTopicOwner(topic, userDirectoryService.getCurrentUser().getId());
   }
   
-  public boolean isTopicOwner(DiscussionTopic topic, String userId)
-  {
-	  return isTopicOwner(topic, userId, getContextSiteId());
+  public boolean isTopicOwner(DiscussionTopic topic, String userId) {
+	  return isTopicOwner(topic, userId, getContextForTopicById(topic.getId()));
   }
   
   public boolean isTopicOwner(DiscussionTopic topic, String userId, String siteId)

@@ -224,7 +224,7 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
       	    	
       	    	topic.setMembershipItemSet(mySet);
       	    	
-      	    	forumManager.saveTopic(topic, false, siteId);
+      	    	forumManager.saveTopic(topic, false, true);
       	    	
           	} catch (Exception e) {
           		e.printStackTrace();
@@ -299,8 +299,6 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
   	    		throw new IllegalArgumentException("Invalid entity for creation, no forum found");
   	    	}
   	    	
-    		String siteId = forumManager.getContextForForumById(forum.getId());
-    		
 			StringBuilder alertMsg = new StringBuilder();
 			topic.setTitle(FormattedText.processFormattedText(dTopic.getTopicTitle(), alertMsg));
 			topic.setShortDescription(FormattedText.processFormattedText(dTopic.getTopicShortDescription(), alertMsg));
@@ -311,7 +309,7 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
     		//	message.setInReplyTo(forumManager.getMessageById(message.getInReplyTo().getId()));
     		//}
     		
-    		forumManager.saveTopic(topic, false, siteId);
+    		forumManager.saveTopic(topic, false, true);
     	}
 	}
 
@@ -388,13 +386,11 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 	    	  throw new IllegalArgumentException("Invalid entity for creation, no forum found");
 	    }
 	    	
-  		String siteId = forumManager.getContextForForumById(forum.getId());
-		  
-		if (!uiPermissionsManager.isChangeSettings(topic, forum, siteId)) {
+		if (!uiPermissionsManager.isChangeSettings(topic, forum)) {
 		    throw new IllegalArgumentException("Cannot delete topic, Insufficient Privilages");
 	    }
 
-		forumManager.deleteTopic(topic, siteId);		   
+		forumManager.deleteTopic(topic);		   
 	}
 
 	public List<?> getEntities(EntityReference ref, Search search) {

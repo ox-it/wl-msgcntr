@@ -13,6 +13,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.api.app.messageforums.Attachment;
+import org.sakaiproject.api.app.messageforums.BaseForum;
 import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionForumService;
 import org.sakaiproject.api.app.messageforums.DiscussionTopic;
@@ -203,8 +204,6 @@ private RequestStorage requestStorage;
       		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
       		DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
       		
-      		String siteId = forumManager.getContextForForumById(forum.getId());
-      		
       		try {
             
       		    Message aMsg = messageManager.createDiscussionMessage();
@@ -237,7 +236,7 @@ private RequestStorage requestStorage;
       		    	aMsg.setTopic(topic);
       		    	
       		    	aMsg.setInReplyTo(replyToMessage);
-      		    	forumManager.saveMessage(aMsg, siteId);
+      		    	forumManager.saveMessage(aMsg);
       		    }
       		 
           	} catch (Exception e) {
@@ -286,8 +285,6 @@ private RequestStorage requestStorage;
     		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
         	DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
       		
-      		String siteId = forumManager.getContextForForumById(forum.getId());
-
     		/*
 		 	for (int i = 0; i < prepareRemoveAttach.size(); i++) {
 				DecoratedAttachment removeAttach = (DecoratedAttachment) prepareRemoveAttach.get(i);
@@ -340,7 +337,7 @@ private RequestStorage requestStorage;
     			message.setInReplyTo(forumManager.getMessageById(message.getInReplyTo().getId()));
     		}
     		
-    		forumManager.saveMessage(message, siteId);
+    		forumManager.saveMessage(message);
     	}
 
     }
@@ -354,6 +351,10 @@ private RequestStorage requestStorage;
 	  Message message = forumManager.getMessageById(new Long(ref.getId()));
 	  if (null == message) {
 		  throw new IllegalArgumentException("IdUnusedException in Resource Entity Provider");
+	  }
+	  if (null == message.getTopic()) {
+		  
+		  throw new IllegalArgumentException("IdInvalidException in Resource Entity Provider");
 	  }
 	  DecoratedMessage dMessage = null;
 	  
@@ -394,17 +395,18 @@ private RequestStorage requestStorage;
       if (id == null || "".equals(id)) {
           throw new IllegalArgumentException("Cannot delete message, No id in provided reference: " + ref);
       }
-	  Message message = forumManager.getMessageById(new Long(ref.getId()));
+	  Message message = messageManager.getMessageById(new Long(id));
 	  if (null == message) {
           throw new IllegalArgumentException("Cannot delete message, No message in provided reference: " + ref);
       }
 	  
-	  DiscussionTopic topic = forumManager.getTopicById(message.getTopic().getId());
-	  DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
-		
-	  String siteId = forumManager.getContextForForumById(forum.getId());
-
-	  messageManager.deleteMessage(message, siteId);
+	  // Topic attached to this message gives LazyInitialisationException on forum.getArea()
+	  Topic topic = forumManager.getTopicById(message.getTopic().getId());
+	  BaseForum forum = forumManager.getForumById(topic.getBaseForum().getId());
+	  topic.setBaseForum(forum);
+	  message.setTopic(topic);
+	  
+	  messageManager.deleteMessage(message);
 	  
   }
   

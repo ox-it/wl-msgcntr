@@ -105,7 +105,7 @@ public interface DiscussionForumManager
    * @param message
    */
   void saveMessage(Message message);
-  void saveMessage(Message message, String siteId);
+  void saveMessage(Message message, boolean logEvent);
 
   /**
    * @param message
@@ -294,15 +294,13 @@ public interface DiscussionForumManager
   /**
    * @param topic
    */
-  public void saveTopic(DiscussionTopic topic, boolean draft);
-  public void saveTopic(DiscussionTopic topic, boolean draft, String siteId);
-  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser, String siteId);
+  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent);
+  public void saveTopic(DiscussionTopic topic, boolean draft, boolean logEvent, String currentUser);
   /**
    * @param topic
    */
   public void deleteTopic(DiscussionTopic topic);
-  public void deleteTopic(DiscussionTopic topic, String siteId);
-
+  
   /**
    * @return
    */
