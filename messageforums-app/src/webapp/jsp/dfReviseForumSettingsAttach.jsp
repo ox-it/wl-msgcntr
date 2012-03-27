@@ -95,7 +95,7 @@
 			<%--RTEditor area - if enabled--%>
 			<h:panelGroup rendered="#{! ForumTool.disableLongDesc}">
 				<h:outputText id="outputLabel2" value="#{msgs.cdfm_fullDescription}" style="display:block;padding:.5em 0"/>
-			<sakai:inputRichText textareaOnly="#{PrivateMessagesTool.mobileSession}" rows="12" cols="120" id="df_compose_description" value="#{ForumTool.selectedForum.forum.extendedDescription}">
+			<sakai:inputRichText textareaOnly="#{PrivateMessagesTool.mobileSession}" buttonSet="#{ForumTool.buttonSet}" rows="12" cols="120" id="df_compose_description" value="#{ForumTool.selectedForum.forum.extendedDescription}">
 				<f:validateLength maximum="65000"/>
 			</sakai:inputRichText>
 	      	</h:panelGroup>
@@ -183,6 +183,15 @@
 				<h:panelGroup>
 					<h:selectOneRadio layout="lineDirection"  id="moderated"  value="#{ForumTool.selectedForum.moderated}" 
 						onclick="javascript:disableOrEnableModeratePerm();"  styleClass="selectOneRadio">
+    					<f:selectItem itemValue="true" itemLabel="#{msgs.cdfm_yes}"/>
+    					<f:selectItem itemValue="false" itemLabel="#{msgs.cdfm_no}"/>
+  					</h:selectOneRadio>
+				</h:panelGroup>
+			<h:panelGroup>
+					<h:outputText  value="#{msgs.cdfm_markup_free}" />	
+				</h:panelGroup>
+				<h:panelGroup>
+					<h:selectOneRadio layout="lineDirection"  id="markup_free"  value="#{ForumTool.selectedForum.markupFree}"  styleClass="selectOneRadio">
     					<f:selectItem itemValue="true" itemLabel="#{msgs.cdfm_yes}"/>
     					<f:selectItem itemValue="false" itemLabel="#{msgs.cdfm_no}"/>
   					</h:selectOneRadio>

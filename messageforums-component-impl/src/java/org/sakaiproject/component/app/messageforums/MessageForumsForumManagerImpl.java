@@ -147,6 +147,7 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
 
     private ServerConfigurationService serverConfigurationService;
     private Boolean DEFAULT_AUTO_MARK_READ = false; 
+    private Boolean DEFAULT_MARKUP_FREE = false; 
 
     private MessageForumsTypeManager typeManager;
 
@@ -772,6 +773,7 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
         forum.setActorPermissions(createDefaultActorPermissions());
         forum.setModerated(Boolean.FALSE);
         forum.setAutoMarkThreadsRead(DEFAULT_AUTO_MARK_READ);
+        forum.setMarkupFree(DEFAULT_MARKUP_FREE);
         LOG.debug("createDiscussionForum executed");
         return forum;
     }
@@ -855,7 +857,7 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
     }
 
     public void saveDiscussionForum(DiscussionForum forum, boolean draft) {
-    	saveDiscussionForum(forum, draft, false);
+    	saveDiscussionForum(forum, draft, false, getContextId());
     }
     
     public void saveDiscussionForum(DiscussionForum forum, boolean draft, boolean logEvent) {
@@ -909,12 +911,13 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
         }
         
         getHibernateTemplate().saveOrUpdate(forum);
-
+        
         if (logEvent) {
+        	String siteId = forum.getArea().getContextId();
         	if (isNew) {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_ADD, getEventMessage(forum), false));
+        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_ADD, getEventMessage(forum, siteId), false));
         	} else {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, getEventMessage(forum), false));
+        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, getEventMessage(forum, siteId), false));
         	}
         }
 
@@ -1125,8 +1128,12 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
      * Delete a discussion forum topic
      */
     public void deleteDiscussionForumTopic(DiscussionTopic topic) {
-        long id = topic.getId().longValue();
-        eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REMOVE, getEventMessage(topic), false));
+
+        Topic finder = getTopicById(true, topic.getId());
+        BaseForum forum = finder.getBaseForum();
+        String siteId = forum.getArea().getContextId();
+        
+        eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REMOVE, getEventMessage(topic, siteId), false));
         try {
             getSession().evict(topic);
         } catch (Exception e) {
@@ -1134,12 +1141,11 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
             LOG.error("could not evict topic: " + topic.getId(), e);
         }
         
-        Topic finder = getTopicById(true, topic.getId());
-        BaseForum forum = finder.getBaseForum();
         forum.removeTopic(topic);
         getHibernateTemplate().saveOrUpdate(forum);
         
         //getHibernateTemplate().delete(topic);
+        long id = topic.getId().longValue();
         LOG.debug("deleteDiscussionForumTopic executed with topicId: " + id);
     }
 

@@ -137,10 +137,15 @@ public class MessageImpl extends MutableEntityImpl implements Message
 	{
 		return author;
 	}
-
+	
 	public void setAuthor(String author)
 	{
 		this.author = author;
+	}
+	
+	public String getAuthorId()
+	{
+		return createdBy;
 	}
 
 	public String getBody()

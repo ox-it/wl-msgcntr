@@ -300,7 +300,7 @@ public interface DiscussionForumManager
    * @param topic
    */
   public void deleteTopic(DiscussionTopic topic);
-
+  
   /**
    * @return
    */
@@ -339,12 +339,14 @@ public interface DiscussionForumManager
    * @return
    */
   public List getTopicControlPermissions(DiscussionTopic topic);
-
+  
   /**
    * @param topic
    * @return
    */
   public List getTopicMessagePermissions(DiscussionTopic topic);
+  
+  public List getTopicMembershipItems(String siteId);
 
   /**
    * @param controlPermission

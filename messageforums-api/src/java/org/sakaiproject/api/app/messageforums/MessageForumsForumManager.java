@@ -152,7 +152,7 @@ public interface MessageForumsForumManager {
      * Delete a discussion forum topic
      */
     public void deleteDiscussionForumTopic(DiscussionTopic topic);
-
+   
     /**
      * Delete an open forum topic
      */

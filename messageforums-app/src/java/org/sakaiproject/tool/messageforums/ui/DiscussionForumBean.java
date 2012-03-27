@@ -228,6 +228,24 @@ public class DiscussionForumBean
 	  LOG.debug("setAutoMarkThreadsRead()");
 	  forum.setAutoMarkThreadsRead(Boolean.parseBoolean(autoMarkThreadsRead));
   }
+  
+  /**
+   * Return whether or not the forum is markup free.
+   */
+  public String getMarkupFree()
+  {
+	  LOG.debug("getMarkupFree()");
+	  return Boolean.toString(forum.getMarkupFree());
+  }
+  
+  /**
+   * Set the forum to accept text only messages.
+   */
+  public void setMarkupFree(String markupFree)
+  {
+	  LOG.debug("setMarkupFree()");
+	  forum.setMarkupFree(Boolean.parseBoolean(markupFree));
+  }
 
   /**
    * @return Returns the markForDeletion.

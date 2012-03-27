@@ -246,6 +246,7 @@ public class DiscussionForumTool
   private String userId;
   
   private boolean showForumLinksInNav = true;
+  private boolean showProfileInfo = true;
 
   // compose
   private MessageForumsMessageManager messageManager;
@@ -353,6 +354,7 @@ public class DiscussionForumTool
     }
     
     showForumLinksInNav = ServerConfigurationService.getBoolean("mc.showForumLinksInNav", true);
+    showProfileInfo = ServerConfigurationService.getBoolean("profile2.profile.link.enabled", true);
   }
 
   // Is Gradebook defined for the site?
@@ -4826,7 +4828,7 @@ public class DiscussionForumTool
 			  .getTopicByIdWithMessages(selectedTopic.getTopic().getId()));
 
 	  // does the actual save to 'delete' this message
-	  forumManager.saveMessage(message, false);
+	  forumManager.saveMessage(message);
 
 	  // reload the topic, forum and reset the topic's base forum
 	  selectedTopic = getDecoratedTopic(selectedTopic.getTopic());
@@ -5943,7 +5945,7 @@ public class DiscussionForumTool
         msg.setGradeAssignmentName(selectedAssignName);
         msg.setTopic((DiscussionTopic) forumManager
                 .getTopicByIdWithMessages(selectedTopic.getTopic().getId()));
-        forumManager.saveMessage(msg, false);
+        forumManager.saveMessage(msg);
         
         setSuccessMessage(getResourceBundleString(GRADE_SUCCESSFUL));
     } 
@@ -7847,6 +7849,24 @@ public class DiscussionForumTool
         }
         
         return threadHead;
+	}
+		
+	public String getButtonSet()
+	{
+		String rv = new Boolean(selectedForum.getMarkupFree()).booleanValue() ?"Minimal":"Default"; 
+		return rv;
+	}
+	
+	public String getServerUrl() {
+		return ServerConfigurationService.getServerUrl();
+	}
+			
+	public boolean getShowProfileInfo() {
+		if (showProfileInfo) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
 

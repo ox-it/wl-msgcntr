@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.api.app.messageforums.Area;
 import org.sakaiproject.api.app.messageforums.AreaManager;
+import org.sakaiproject.api.app.messageforums.BaseForum;
 import org.sakaiproject.api.app.messageforums.DBMembershipItem;
 import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionTopic;
@@ -227,7 +228,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     {
       return true;
     }
-    if (securityService.unlock(SiteService.SECURE_UPDATE_SITE, getContextSiteId())){
+    if (securityService.unlock(SiteService.SECURE_UPDATE_SITE, getContextSiteId(null))){
     	return true;
     }
     if (forumManager.isForumOwner(forum))
@@ -416,18 +417,19 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
    * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isChangeSettings(org.sakaiproject.api.app.messageforums.DiscussionTopic,
    *      org.sakaiproject.api.app.messageforums.DiscussionForum)
    */
-  public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum)
-  {
-    if (LOG.isDebugEnabled())
-    {
+  public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum) {
+
+    if (LOG.isDebugEnabled()) {
       LOG.debug("isChangeSettings(DiscussionTopic " + topic
           + "), DiscussionForum" + forum + "");
     }
-    if (isSuperUser())
-    {
+    
+    if (isSuperUser()) {
       return true;
     }
-    if (securityService.unlock(SiteService.SECURE_UPDATE_SITE, getContextSiteId())){
+    
+    String siteId = forumManager.getContextForForumById(forum.getId());
+    if (securityService.unlock(SiteService.SECURE_UPDATE_SITE, siteId)){
     	return true;
     }
     try
@@ -1044,9 +1046,15 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
   public Set getAreaItemsSet(Area area)
   {
-		if (ThreadLocalManager.get("message_center_permission_set") == null || !((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue())
+
+		if (ThreadLocalManager.get("message_center_permission_set") == null || 
+				!((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue())
 		{
-			initMembershipForSite();
+		    if (null == area) {
+		    	initMembershipForSite();
+		    } else {
+		    	initMembershipForSite(area.getContextId());
+		    }
 		}
 		Set allAreaSet = (Set) ThreadLocalManager.get("message_center_membership_area");
 		Set returnSet = new HashSet();
@@ -1151,11 +1159,18 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     return forumItems.iterator();
   }
 
-  public Set getForumItemsSet(DiscussionForum forum)
-  {
-		if (ThreadLocalManager.get("message_center_permission_set") == null || !((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite();
+    public Set getForumItemsSet(DiscussionForum forum) {
+	  
+		if (ThreadLocalManager.get("message_center_permission_set") == null || 
+			!((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue()) {
+			
+			String contextId;  
+		    if (null == forum.getId()) {
+			    contextId = getContextId();
+		    } else {
+		  	    contextId = forumManager.getContextForForumById(forum.getId());
+		    }
+		    initMembershipForSite(contextId);
 		}
 
 		Set allForumSet = (Set) ThreadLocalManager.get("message_center_membership_forum");
@@ -1171,7 +1186,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 		}
 
 		return returnSet;
-  }
+    }
   
   private Iterator getTopicItemsByCurrentUser(DiscussionTopic topic){
 	  return getTopicItemsByUser(topic, getCurrentUserId());
@@ -1256,11 +1271,18 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     return topicItems.iterator();
   }
   
-  public Set getTopicItemsSet(DiscussionTopic topic)
-  {
-		if (ThreadLocalManager.get("message_center_permission_set") == null || !((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite();
+  public Set getTopicItemsSet(DiscussionTopic topic) {
+	  
+	  if (ThreadLocalManager.get("message_center_permission_set") == null || 
+			  !((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue()) {
+		  
+		    String contextId;  
+		    if (null == topic.getId()) {
+			    contextId = getContextId();
+		    } else {
+		  	    contextId = forumManager.getContextForTopicById(topic.getId());
+		    }
+		    initMembershipForSite(contextId);
 		}
 
 		Set allTopicSet = (Set) ThreadLocalManager.get("message_center_membership_topic");
@@ -1300,7 +1322,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
       LOG.debug("isInstructor(User " + user + ")");
     }
     if (user != null)
-      return securityService.unlock(user, "site.upd", getContextSiteId());
+      return securityService.unlock(user, "site.upd", getContextSiteId(null));
     else
       return false;
   }
@@ -1308,9 +1330,12 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   /**
    * @return siteId
    */
-  private String getContextSiteId()
+  private String getContextSiteId(String siteId)
   {
     LOG.debug("getContextSiteId()");
+    if (null != siteId) {
+    	return ("/site/" + siteId);
+    }
     return ("/site/" + toolManager.getCurrentPlacement().getContext());
   }
 
@@ -1424,7 +1449,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private boolean checkBaseConditions(DiscussionTopic topic,
       DiscussionForum forum, String userId)
   {
-	  return checkBaseConditions(topic, forum, userId, getContextSiteId());
+	  return checkBaseConditions(topic, forum, userId, getContextSiteId(null));
   }
   
   private boolean checkBaseConditions(DiscussionTopic topic,
