@@ -913,11 +913,16 @@ public class MessageForumsForumManagerImpl extends HibernateDaoSupport implement
         getHibernateTemplate().saveOrUpdate(forum);
         
         if (logEvent) {
-        	String siteId = forum.getArea().getContextId();
         	if (isNew) {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_ADD, getEventMessage(forum, siteId), false));
+        		eventTrackingService.post(
+        				eventTrackingService.newEvent(
+        						DiscussionForumService.EVENT_FORUMS_FORUM_ADD, 
+        						getEventMessage(forum, getContextId()), false));
         	} else {
-        		eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, getEventMessage(forum, siteId), false));
+        		eventTrackingService.post(
+        				eventTrackingService.newEvent(
+        						DiscussionForumService.EVENT_FORUMS_FORUM_REVISE, 
+        						getEventMessage(forum, forum.getArea().getContextId()), false));
         	}
         }
 
