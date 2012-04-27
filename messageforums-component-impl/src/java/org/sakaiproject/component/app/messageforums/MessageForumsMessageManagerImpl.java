@@ -1074,19 +1074,25 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
     public void saveMessage(Message message) {
     	saveMessage(message, true);
     }
-    
+
     public void saveMessage(Message message, boolean logEvent) {
-    	BaseForum forum = message.getTopic().getBaseForum();
-    	String contextId = forum.getArea().getContextId();
-    	saveMessage(message, logEvent, null, getCurrentUser(), contextId);
-    }
-    
-    public void saveMessage(Message message, boolean logEvent, String toolId, String userId, String contextId){
-       	saveMessage(message, logEvent, toolId, userId, contextId, false);
+    	String contextId = null;
+    	if (logEvent) {
+    		Topic topic = message.getTopic();
+    		// Messages in a private forum don't have topics.
+    		if (topic != null) {
+    			BaseForum forum = topic.getBaseForum();
+    			contextId = forum.getArea().getContextId();
+    		}
+    	}
+    	saveMessage(message, logEvent, null, getCurrentUser(), contextId, false);
     }
     
     public void saveMessage(Message message, boolean logEvent, String toolId, String userId, String contextId, boolean ignoreLockedTopicForum){
     
+    	if(logEvent && contextId == null) {
+    		LOG.warn("contentId must be set when logging events.", new Exception());
+    	}
         boolean isNew = message.getId() == null;
         
         if (!ignoreLockedTopicForum && !(message instanceof PrivateMessage)){                  
@@ -1097,10 +1103,13 @@ public class MessageForumsMessageManagerImpl extends HibernateDaoSupport impleme
         }
         
         boolean markupFree = false;
-        BaseForum forum = message.getTopic().getBaseForum();
-        if (forum instanceof DiscussionForum) {
-        	DiscussionForum dForum = (DiscussionForum)forum;
-        	markupFree = dForum.getMarkupFree();
+        Topic topic = message.getTopic();
+        if (topic != null) {
+        	BaseForum forum = topic.getBaseForum();
+        	if (forum instanceof DiscussionForum) {
+        		DiscussionForum dForum = (DiscussionForum)forum;
+        		markupFree = dForum.getMarkupFree();
+        	}
         }
         if (markupFree) {
         	message.setBody(messageParsingService.parse(message.getBody()));
