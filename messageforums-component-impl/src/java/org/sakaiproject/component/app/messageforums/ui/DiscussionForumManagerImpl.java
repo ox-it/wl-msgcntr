@@ -52,6 +52,7 @@ import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsUser;
 import org.sakaiproject.api.app.messageforums.MessagePermissions;
+import org.sakaiproject.api.app.messageforums.OpenForum;
 import org.sakaiproject.api.app.messageforums.PermissionLevel;
 import org.sakaiproject.api.app.messageforums.PermissionLevelManager;
 import org.sakaiproject.api.app.messageforums.PermissionManager;
@@ -1228,13 +1229,6 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
     	ForumScheduleNotificationCover.scheduleAvailability(topic);
     }
     
-    String siteId = null;
-    if (null != topic.getBaseForum()) {
-    	siteId = getContextForForumById(topic.getBaseForum().getId());
-    } else {
-    	siteId = getContextForTopicById(topic.getId());
-    }
-    
     if (saveForum) {
     	DiscussionForum forum = (DiscussionForum) topic.getBaseForum();
     	forum.addTopic(topic);
@@ -1242,6 +1236,15 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
     	//sak-5146 forumManager.saveDiscussionForum(forum);
     }   
     
+	OpenForum oForum = null;
+	if (null == getTopicById(topicId).getOpenForum()) {
+		oForum = (OpenForum)forumManager.getForumById
+				(true, getTopicById(topicId).getBaseForum().getId());
+	} else {
+		oForum = getTopicById(topicId).getOpenForum();
+	}
+	String siteId = oForum.getArea().getContextId();
+	
     if (logEvent) {
     	if (topic.getId() == null) {
     		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_ADD, getEventMessage(topic, siteId), false));
