@@ -717,6 +717,55 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     }
     return false;
   }
+  
+  public boolean isDeleteAny(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId)
+  {
+    if (LOG.isDebugEnabled())
+    {
+      LOG.debug("isDeleteAny(DiscussionTopic " + topic + ", DiscussionForum"
+          + forum + ")");
+    }
+    if (checkBaseConditions(topic, forum, userId, siteId))
+    {
+      return true;
+    }
+    try
+    {
+      if (checkBaseConditions(topic, forum, userId, siteId))
+      {
+        return true;
+      }
+        if (topic.getLocked() == null || topic.getLocked().equals(Boolean.TRUE))
+    {
+      LOG.debug("This topic is locked " + topic);
+      return false;
+    }
+    if (topic.getDraft() == null || topic.getDraft().equals(Boolean.TRUE))
+    {
+      LOG.debug("This topic is at draft stage " + topic);
+    }
+      Iterator iter = getTopicItemsByUser(topic, userId, siteId);
+      while (iter.hasNext())
+      {
+        DBMembershipItem item = (DBMembershipItem) iter.next();
+        if (item.getPermissionLevel().getDeleteAny().booleanValue()
+            && forum.getDraft().equals(Boolean.FALSE)
+            && forum.getLocked().equals(Boolean.FALSE)
+            && topic.getDraft().equals(Boolean.FALSE)
+            && topic.getLocked().equals(Boolean.FALSE))
+        {
+          return true;
+        }
+      }
+
+    }
+    catch (Exception e)
+    {
+      LOG.error(e.getMessage(), e);
+      return false;
+    }
+    return false;
+  }
 
   /**   
    * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isDeleteOwn(org.sakaiproject.api.app.messageforums.DiscussionTopic,
@@ -771,6 +820,54 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     return false;
   }
 
+  public boolean isDeleteOwn(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId)
+  {
+    if (LOG.isDebugEnabled())
+    {
+      LOG.debug("isDeleteOwn(DiscussionTopic " + topic + ", DiscussionForum"
+          + forum + ")");
+    }
+    if (checkBaseConditions(topic, forum, userId, siteId))
+    {
+      return true;
+    }
+    try
+    {
+      if (checkBaseConditions(topic, forum, userId, siteId))
+      {
+        return true;
+      }
+        if (topic.getLocked() == null || topic.getLocked().equals(Boolean.TRUE))
+    {
+      LOG.debug("This topic is locked " + topic);
+      return false;
+    }
+    if (topic.getDraft() == null || topic.getDraft().equals(Boolean.TRUE))
+    {
+      LOG.debug("This topic is at draft stage " + topic);
+    }
+      Iterator iter = getTopicItemsByUser(topic, userId, siteId);
+      while (iter.hasNext())
+      {
+        DBMembershipItem item = (DBMembershipItem) iter.next();
+        if (item.getPermissionLevel().getDeleteOwn().booleanValue()
+            && forum.getDraft().equals(Boolean.FALSE)
+            && forum.getLocked().equals(Boolean.FALSE)
+            && topic.getDraft().equals(Boolean.FALSE)
+            && topic.getLocked().equals(Boolean.FALSE))
+        {
+          return true;
+        }
+      }
+
+    }
+    catch (Exception e)
+    {
+      LOG.error(e.getMessage(), e);
+      return false;
+    }
+    return false;
+  }
   /**   
    * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isMarkAsRead(org.sakaiproject.api.app.messageforums.DiscussionTopic,
    *      org.sakaiproject.api.app.messageforums.DiscussionForum)

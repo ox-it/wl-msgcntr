@@ -106,12 +106,14 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isDeleteAny(DiscussionTopic topic, DiscussionForum forum);
-
+  public boolean isDeleteAny(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId);
+  
   /**
    * @param topic
    * @return
    */
   public boolean isDeleteOwn(DiscussionTopic topic, DiscussionForum forum);
+  public boolean isDeleteOwn(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId);
 
   /**
    * @param topic

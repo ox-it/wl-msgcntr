@@ -48,6 +48,7 @@ import org.sakaiproject.entitybroker.entityprovider.search.Restriction;
 import org.sakaiproject.entitybroker.entityprovider.search.Search;
 import org.sakaiproject.event.cover.EventTrackingService;
 import org.sakaiproject.site.cover.SiteService;
+import org.sakaiproject.tool.cover.SessionManager;
 import org.sakaiproject.user.api.User;
 import org.sakaiproject.user.api.UserAlreadyDefinedException;
 import org.sakaiproject.user.api.UserEdit;
@@ -400,13 +401,57 @@ private RequestStorage requestStorage;
           throw new IllegalArgumentException("Cannot delete message, No message in provided reference: " + ref);
       }
 	  
-	  // Topic attached to this message gives LazyInitialisationException on forum.getArea()
-	  Topic topic = forumManager.getTopicById(message.getTopic().getId());
-	  BaseForum forum = forumManager.getForumById(topic.getBaseForum().getId());
-	  topic.setBaseForum(forum);
-	  message.setTopic(topic);
+	  DiscussionTopic topic = forumManager.getTopicById(message.getTopic().getId());
+	  DiscussionForum forum = forumManager.getForumById(topic.getBaseForum().getId());
 	  
-	  messageManager.deleteMessage(message);
+	  String siteId = forumManager.getContextForForumById(forum.getId());
+	  
+	  //Synoptic Message/Forums tool
+	  HashMap<String, Integer> beforeChangeHM = null;    
+	    Long forumId = forum.getId();
+	    Long topicId = topic.getId();
+	    beforeChangeHM = SynopticMsgcntrManagerCover
+	    		.getUserToNewMessagesForForumMap(siteId, forumId, topicId);
+	 
+	  if(!uiPermissionsManager.isDeleteAny(topic, forum, userId, siteId) && 
+				  !(message.getCreatedBy().equals(userId) && 
+						  uiPermissionsManager.isDeleteOwn(topic, forum, userId, siteId))) {
+			  
+		  throw new IllegalArgumentException("Cannot delete message, insufficient Privileges: " + ref);
+	  }
+	  // 'delete' this message
+	  message.setDeleted(Boolean.TRUE);
+	  
+	  // reload topic for this message so we can save it
+	  message.setTopic((DiscussionTopic) forumManager
+			  .getTopicByIdWithMessages(message.getTopic().getId()));
+
+	  // does the actual save to 'delete' this message
+	  forumManager.saveMessage(message);
+	  /*
+	  // reload the topic, forum and reset the topic's base forum
+	  dtopic = getDecoratedTopic(dtopic.getTopic());
+	  setSelectedForumForCurrentTopic((DiscussionTopic) forumManager
+			  .getTopicByIdWithMessages(selectedTopic.getTopic().getId()));   
+	  selectedTopic.getTopic().setBaseForum(selectedForum.getForum());
+
+	  this.deleteMsg = false;
+	  */
+	  //Synoptic Message/Forums tool
+	  //Compare previous new message counts to current new message counts after
+	  //message was deleted for all users:
+	  if(beforeChangeHM != null)
+	  	  SynopticMsgcntrManagerCover.updateSynopticMessagesForForumComparingOldMessagesCount(
+	    			siteId, forumId, topicId, beforeChangeHM);
+	  
+	  /*
+	  // TODO: document it was done for tracking purposes
+	  EventTrackingService.post(EventTrackingService.newEvent(
+			  DiscussionForumService.EVENT_FORUMS_REMOVE, getEventReference(message), true));
+	  */
+	  LOG.info("Forum message " + message.getId() + " has been deleted by " + userId);
+	   
+	   
 	  
   }
   
