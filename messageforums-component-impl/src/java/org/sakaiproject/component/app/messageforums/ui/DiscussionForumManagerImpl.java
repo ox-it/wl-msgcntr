@@ -1246,7 +1246,7 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
 	String siteId = oForum.getArea().getContextId();
 	
     if (logEvent) {
-    	if (topic.getId() == null) {
+    	if (saveForum) {
     		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_ADD, getEventMessage(topic, siteId), false));
     	} else {
     		EventTrackingService.post(EventTrackingService.newEvent(DiscussionForumService.EVENT_FORUMS_TOPIC_REVISE, getEventMessage(topic, siteId), false));
