@@ -238,6 +238,7 @@ private RequestStorage requestStorage;
       		    	
       		    	aMsg.setInReplyTo(replyToMessage);
       		    	forumManager.saveMessage(aMsg);
+      		    	messageId = aMsg.getId();
       		    }
       		 
           	} catch (Exception e) {
