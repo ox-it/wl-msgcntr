@@ -12,6 +12,7 @@ public class DecoratedMessage {
 	private List<String> attachments;
 	private List<DecoratedMessage> replies;
 	private String authoredBy;
+	private String profileImageURL;
 	private int indentIndex = 0;
 	private Long replyTo;
 	private String createdOn;
@@ -25,7 +26,7 @@ public class DecoratedMessage {
 	public DecoratedMessage(Long messageId, Long topicId, String title, 
 			String body, String lastModified, 
 			List<String> attachments, List<DecoratedMessage> replies, 
-			String authoredBy, Long replyTo, String createdOn, boolean read, 
+			String authoredBy, String profileImageURL, Long replyTo, String createdOn, boolean read, 
 			String recipients, String label) {
 		
 		this.messageId = messageId;
@@ -36,6 +37,7 @@ public class DecoratedMessage {
 		this.replies = replies;
 		this.lastModified = lastModified;
 		this.authoredBy = authoredBy;
+		this.profileImageURL = profileImageURL;
 		this.replyTo = replyTo;
 		this.createdOn = createdOn;
 		this.read = read;
@@ -99,6 +101,13 @@ public class DecoratedMessage {
 	}
 	public void setAuthoredBy(String authoredBy) {
 		this.authoredBy = authoredBy;
+	}
+	
+	public String getProfileImageURL() {
+		return profileImageURL;
+	}
+	public void setProfileImageURL(String profileImageURL) {
+		this.profileImageURL = profileImageURL;
 	}
 	public int getIndentIndex() {
 		return indentIndex;

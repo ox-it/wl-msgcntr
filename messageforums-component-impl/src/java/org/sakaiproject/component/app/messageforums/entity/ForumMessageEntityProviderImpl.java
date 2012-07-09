@@ -30,7 +30,7 @@ import org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager;
 import org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager;
 import org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager;
 import org.sakaiproject.authz.cover.SecurityService;
-import org.sakaiproject.component.cover.ServerConfigurationService;
+import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.entity.api.ResourcePropertiesEdit;
 import org.sakaiproject.entitybroker.EntityReference;
 import org.sakaiproject.entitybroker.EntityView;
@@ -63,10 +63,50 @@ import org.springframework.orm.hibernate3.HibernateOptimisticLockingFailureExcep
 public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvider,
     AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, RequestAware, ActionsExecutable {
 
-  private DiscussionForumManager forumManager;
-  private PrivateMessageManager privateMessageManager;
-  private UIPermissionsManager uiPermissionsManager;
-  private MessageForumsMessageManager messageManager;
+	private DiscussionForumManager forumManager;
+	
+	/**
+	 * 
+	 */
+	private PrivateMessageManager privateMessageManager;
+	public void setPrivateMessageManager(PrivateMessageManager privateMessageManager) {
+		this.privateMessageManager = privateMessageManager;
+	}
+	public PrivateMessageManager getPrivateMessageManager() {
+		return privateMessageManager;
+	}
+	
+	/**
+	 * 
+	 */
+	private UIPermissionsManager uiPermissionsManager;
+	public void setUiPermissionsManager(UIPermissionsManager uiPermissionsManager) {
+		this.uiPermissionsManager = uiPermissionsManager;
+	}
+	public UIPermissionsManager getUiPermissionsManager() {
+		return uiPermissionsManager;
+	}
+	
+	/**
+	 * 
+	 */
+	private MessageForumsMessageManager messageManager;
+	public void setMessageManager(MessageForumsMessageManager messageManager) {
+		this.messageManager = messageManager;
+	}
+	public MessageForumsMessageManager getMessageManager() {
+		return messageManager;
+	}
+  
+  	/**
+  	 * 
+  	 */
+	private ServerConfigurationService serverConfigurationService;
+	public void setServerConfigurationService(
+			ServerConfigurationService serverConfigurationService) {
+		this.serverConfigurationService = serverConfigurationService;
+	}
+  
   private static final Log LOG = LogFactory.getLog(ForumMessageEntityProviderImpl.class);
   
   private static final String MESSAGECENTER_BUNDLE = "org.sakaiproject.api.app.messagecenter.bundle.Messages";
@@ -378,7 +418,8 @@ private RequestStorage requestStorage;
 		  dMessage = 
 				  new DecoratedMessage(message.getId(), message.getTopic().getId(), message.getTitle(),
 						  message.getBody(), "" + message.getModified().getTime(),
-						  attachments, Collections.EMPTY_LIST, message.getAuthor(), 
+						  attachments, Collections.EMPTY_LIST, 
+						  message.getAuthor(), getProfileImageURL(message.getAuthorId()),
 						  message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
 								  "" + message.getCreated().getTime(), readStatus.booleanValue(), "", "");
 	  }
@@ -477,7 +518,9 @@ private RequestStorage requestStorage;
 							  .getId(), topicId, message.getTitle(),
 							  message.getBody(), "" + message.getModified().getTime(),
 							  attachments, findReplies(messages, message.getId(),
-									  topicId, msgIdReadStatusMap), message.getAuthor(), message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
+									  topicId, msgIdReadStatusMap), 
+									  message.getAuthor(), getProfileImageURL(message.getAuthorId()),
+									  message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
 											  "" + message.getCreated().getTime(), readStatus.booleanValue(), "", "");
 					  replies.add(dMessage);
 				  }		  
@@ -581,7 +624,9 @@ private RequestStorage requestStorage;
 									  .getId(), new Long(topicId), message.getTitle(),
 									  message.getBody(), "" + message.getModified().getTime(),
 									  attachments, findReplies(messages, message.getId(),
-											  new Long(topicId), msgIdReadStatusMap), message.getAuthor(), message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
+											  new Long(topicId), msgIdReadStatusMap), 
+											  message.getAuthor(), getProfileImageURL(message.getAuthorId()),
+											  message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
 													  "" + message.getCreated().getTime(), readStatus.booleanValue(), "", "");				  
 
 							  dMessages.add(dMessage);
@@ -646,7 +691,9 @@ private RequestStorage requestStorage;
 			  DecoratedMessage dMessage = new DecoratedMessage(pvtMessage
 					  .getId(), null, pvtMessage.getTitle(),
 					  pvtMessage.getBody(), "" + pvtMessage.getModified().getTime(),
-					  attachments, null, pvtMessage.getAuthor(), pvtMessage.getInReplyTo() == null ? null : pvtMessage.getInReplyTo().getId(),
+					  attachments, null, 
+					  pvtMessage.getAuthor(), getProfileImageURL(pvtMessage.getAuthorId()),
+					  pvtMessage.getInReplyTo() == null ? null : pvtMessage.getInReplyTo().getId(),
 							  "" + pvtMessage.getCreated().getTime(), read, pvtMessage.getRecipientsAsText(), pvtMessage.getLabel());				  
 
 			  dMessages.add(dMessage);
@@ -864,11 +911,11 @@ private RequestStorage requestStorage;
 		  userEidString = UserDirectoryService.getUser(currentUserId).getDisplayId();
 		  
 		  if((userString != null && userString.length() > 0) && 
-				  ServerConfigurationService.getBoolean("msg.displayEid", true)) {
+				  serverConfigurationService.getBoolean("msg.displayEid", true)) {
 			  return userString + " (" + userEidString + ")";
 			  
 		  }  else if ((userString != null && userString.length() > 0) && 
-				  !ServerConfigurationService.getBoolean("msg.displayEid", true)) {
+				  !serverConfigurationService.getBoolean("msg.displayEid", true)) {
 			  return userString;
 			  
 		  } else {
@@ -882,37 +929,24 @@ private RequestStorage requestStorage;
 	  return UserDirectoryService.getCurrentUser().getId();
   }
   
+  private String getProfileImageURL(String authorId) {
+	  
+	  if (null == authorId || authorId.trim().length() == 0 ) {
+		  return null;
+	  }	
+	  StringBuffer sb = new StringBuffer();
+	  sb.append(serverConfigurationService.getServerUrl());
+	  sb.append("/direct/profile/");
+	  sb.append(authorId);
+	  sb.append("/image/thumb");
+	  return sb.toString();
+  }
+  
   
   public static String getResourceBundleString(String key) 
   {
       final ResourceLoader rb = new ResourceLoader(MESSAGECENTER_BUNDLE);
       return rb.getString(key);
   }
-
-  public PrivateMessageManager getPrivateMessageManager() {
-	  return privateMessageManager;
-  }
-
-
-  public void setPrivateMessageManager(PrivateMessageManager privateMessageManager) {
-	  this.privateMessageManager = privateMessageManager;
-  }
-
-  public UIPermissionsManager getUiPermissionsManager() {
-	  return uiPermissionsManager;
-  }
-
-
-  public void setUiPermissionsManager(UIPermissionsManager uiPermissionsManager) {
-	  this.uiPermissionsManager = uiPermissionsManager;
-  }
-
-public MessageForumsMessageManager getMessageManager() {
-	return messageManager;
-}
-
-public void setMessageManager(MessageForumsMessageManager messageManager) {
-	this.messageManager = messageManager;
-}
 
 }
