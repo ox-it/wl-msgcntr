@@ -329,12 +329,13 @@ public class MessageForumsEntityContentProducer implements
 		try {
 		String url = developerHelperService.getToolViewURL("sakai.forums", path, params, context);
 		log.debug("got url" + url);
+        return url;
 		}
 		catch (Exception e) {
 			//MSGCNTR this could happen if there is no tool placement
 			log.warn("swallowing exception", e);
+            return null;
 		}
-		return null;
 	}
 
 	public boolean isContentFromReader(String reference) {
