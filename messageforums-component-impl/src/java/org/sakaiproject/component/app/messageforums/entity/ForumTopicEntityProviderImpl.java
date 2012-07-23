@@ -177,8 +177,6 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 	public String createEntity(EntityReference ref, Object entity,
 			Map<String, Object> params) {
 		
-		System.out.println("ForumTopicEntityPrivider.createEntity");
-		
   		String userId = UserDirectoryService.getCurrentUser().getId();
   		if (userId == null || "".equals(userId)){
   			throw new SecurityException("Could not create entity, permission denied: " + ref);
@@ -202,13 +200,17 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
       	    	if (forum == null) {
       	    		throw new IllegalArgumentException("Invalid entity for creation, no forum found");
       	    	}
+      	    	
+      	    	String siteId = forumManager.getContextForForumById(forum.getId());
+      	    	
+      	    	if (!uiPermissionsManager.isNewTopic(forum, siteId)) {
+      	    		throw new SecurityException("Could not create entity, permission denied: " + ref);
+      	    	}
       	      
       	    	DiscussionTopic topic = forumManager.createTopic(forum);
       	    	if (topic == null) {
       	    		throw new IllegalArgumentException("Invalid entity for creation, failed to create topic");
       	    	}
-      	    	
-      	    	String siteId = forumManager.getContextForForumById(forum.getId());
       	    	
       	    	StringBuilder alertMsg = new StringBuilder();
       	    	topic.setTitle(FormattedText.processFormattedText(dTopic.getTopicTitle(), alertMsg));
@@ -252,52 +254,30 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
     	if (userId == null || "".equals(userId)){
     		throw new SecurityException("Could not get entity, permission denied: " + ref);
     	}
-    	
-    	//if (!canUserPostMessage("processDfMsgRevisedPost"))  for the user to post for the current topic and forum
-    	//  throw new SecurityException("Could not revise message, permission denied: " + ref);
-	  	//}
 	  
     	String id = ref.getId();
     	if (id == null || "".equals(id)) {
     		throw new IllegalArgumentException("Cannot update, No id in provided reference: " + ref);
     	}
     	
-    	DiscussionTopic topic = (DiscussionTopic)forumManager.getTopicWithAttachmentsById(new Long(ref.getId()));
+    	DiscussionTopic topic = (DiscussionTopic)forumManager.getTopicById(new Long(ref.getId()));
+    	//DiscussionTopic topic = (DiscussionTopic)forumManager.getTopicWithAttachmentsById(new Long(ref.getId()));
     	if (null == topic) {
     		throw new IllegalArgumentException("Cannot update, No topic in provided reference: " + ref);
+    	}
+    	
+    	DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+	    if (forum == null) {
+	    	throw new IllegalArgumentException("Invalid entity for creation, no forum found");
+	    }
+    	
+    	if (!uiPermissionsManager.isChangeSettings(topic, forum)) {
+    		throw new SecurityException("Could not get entity, permission denied: " + ref);
     	}
     	
     	if (entity.getClass().isAssignableFrom(DecoratedTopicInfo.class)) {
     		// if they instead pass in the DecoratedMessage object
     		DecoratedTopicInfo dTopic = (DecoratedTopicInfo) entity;
-
-    		/*
-		 	for (int i = 0; i < prepareRemoveAttach.size(); i++) {
-				DecoratedAttachment removeAttach = (DecoratedAttachment) prepareRemoveAttach.get(i);
-				message.removeAttachment(removeAttach.getAttachment());
-		  	}
-
-		  	List oldList = message.getAttachments();
-		  	for (int i = 0; i < attachments.size(); i++) {  
-				DecoratedAttachment thisAttach = (DecoratedAttachment) attachments.get(i);
-				boolean existed = false;
-				for (int j = 0; j < oldList.size(); j++) {
-					Attachment existedAttach = (Attachment) oldList.get(j);
-			  		if (existedAttach.getAttachmentId()
-							.equals(thisAttach.getAttachment().getAttachmentId())) {
-					  	existed = true;
-					  	break;
-			  		}
-				}
-				if (!existed) {
-			  		message.addAttachment(thisAttach.getAttachment());
-				}
-		  	}
-    		*/
-    		DiscussionForum forum = forumManager.getForumById(dTopic.getForumId());
-  	    	if (forum == null) {
-  	    		throw new IllegalArgumentException("Invalid entity for creation, no forum found");
-  	    	}
   	    	
 			StringBuilder alertMsg = new StringBuilder();
 			topic.setTitle(FormattedText.processFormattedText(dTopic.getTopicTitle(), alertMsg));

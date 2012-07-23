@@ -347,13 +347,15 @@
         <property name="postInterceptors"><list><ref bean="hibernateInterceptor"/></list></property>
     </bean>
        
-    <bean id="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+    <bean id="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" 
+    	class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager">
             <ref bean="org.sakaiproject.springframework.orm.hibernate.GlobalTransactionManager"/>
         </property>
         <property name="target">
             <bean class="org.sakaiproject.component.app.messageforums.ui.DiscussionForumManagerImpl" singleton="true" init-method="init">
-                <lookup-method name="uiPermissionsManager" bean="org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager" />
+                <lookup-method name="uiPermissionsManager" 
+                	bean="org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager" />
                 <property name="sessionFactory">
                     <ref bean="org.sakaiproject.springframework.orm.hibernate.GlobalSessionFactory"/>
                 </property>

@@ -33,18 +33,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.api.app.messageforums.Area;
 import org.sakaiproject.api.app.messageforums.AreaManager;
-import org.sakaiproject.api.app.messageforums.BaseForum;
 import org.sakaiproject.api.app.messageforums.DBMembershipItem;
 import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionTopic;
 import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
-import org.sakaiproject.api.app.messageforums.PermissionLevel;
 import org.sakaiproject.api.app.messageforums.PermissionLevelManager;
 import org.sakaiproject.api.app.messageforums.PermissionManager;
 import org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager;
 import org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager;
 import org.sakaiproject.authz.api.AuthzGroupService;
-import org.sakaiproject.authz.api.Member;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.component.app.messageforums.TestUtil;
 import org.sakaiproject.component.app.messageforums.dao.hibernate.DBMembershipItemImpl;
@@ -52,13 +49,12 @@ import org.sakaiproject.exception.IdUnusedException;
 import org.sakaiproject.site.api.Group;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.cover.SiteService;
+import org.sakaiproject.thread_local.cover.ThreadLocalManager;
 import org.sakaiproject.tool.api.Placement;
 import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.api.ToolManager;
 import org.sakaiproject.user.api.User;
-import org.sakaiproject.user.api.UserNotDefinedException;
 import org.sakaiproject.user.cover.UserDirectoryService;
-import org.sakaiproject.thread_local.cover.ThreadLocalManager;
 
 /**
  * @author <a href="mailto:rshastri@iupui.edu">Rashmi Shastri</a>
@@ -259,7 +255,10 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   /**   
    * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isNewTopic(org.sakaiproject.api.app.messageforums.DiscussionForum)
    */
-  public boolean isNewTopic(DiscussionForum forum)
+  public boolean isNewTopic(DiscussionForum forum) {
+	  return isNewTopic(forum, getContextId());
+  }
+  public boolean isNewTopic(DiscussionForum forum, String contextId)
   {
     if (LOG.isDebugEnabled())
     {
@@ -271,7 +270,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     }
     try
     {
-      Iterator iter = getForumItemsByCurrentUser(forum);
+      Iterator iter = getForumItemsByCurrentUser(forum, contextId);
       while (iter.hasNext())
       {
         DBMembershipItem item = (DBMembershipItem) iter.next();
@@ -289,184 +288,167 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     return false;
   }
 
-  /** 
-   * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isNewResponse(org.sakaiproject.api.app.messageforums.DiscussionTopic,
-   *      org.sakaiproject.api.app.messageforums.DiscussionForum)
-   */
-  public boolean isNewResponse(DiscussionTopic topic, DiscussionForum forum)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("isNewResponse(DiscussionTopic " + topic + "), DiscussionForum"
-          + forum + "");
-    }
+  	/** 
+  	 * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isNewResponse(org.sakaiproject.api.app.messageforums.DiscussionTopic,
+  	 *      org.sakaiproject.api.app.messageforums.DiscussionForum)
+  	 */
+  	public boolean isNewResponse(DiscussionTopic topic, DiscussionForum forum) {
+  		return isNewResponse(topic, forum, getContextId());
+  	}
+  
+  	public boolean isNewResponse(DiscussionTopic topic, DiscussionForum forum, String contextId) {
+  		
+  		if (LOG.isDebugEnabled()) {
+  			LOG.debug("isNewResponse(DiscussionTopic "+topic+"), DiscussionForum"+forum+"");
+  		}
 
-    try
-    {
-      if (checkBaseConditions(topic, forum))
-      {
-        return true;
-      }
-      Iterator iter = getTopicItemsByCurrentUser(topic);
-      while (iter.hasNext())
-      {
-        DBMembershipItem item = (DBMembershipItem) iter.next();
-        if (item.getPermissionLevel().getNewResponse().booleanValue()
-        	&& forum != null
-            && forum.getDraft().equals(Boolean.FALSE)
-            && forum.getLocked().equals(Boolean.FALSE)
-            && topic.getDraft().equals(Boolean.FALSE)
-            && topic.getLocked().equals(Boolean.FALSE))
-        {
-          return true;
-        }
-      }
-    }
-    catch (Exception e)
-    {
-      LOG.error(e.getMessage(), e);
-      return false;
-    }
-    return false;
-  }
+  		try {
+	  		if (checkBaseConditions(topic, forum, getCurrentUserId(), contextId)) {
+	  			return true;
+	  		}
+	  		Iterator iter = getTopicItemsByUser(topic, getCurrentUserId(), contextId);
+	  		while (iter.hasNext()) {
+	  			DBMembershipItem item = (DBMembershipItem) iter.next();
+	  			if (item.getPermissionLevel().getNewResponse().booleanValue()
+	  					&& forum != null
+	  					&& forum.getDraft().equals(Boolean.FALSE)
+	  					&& forum.getLocked().equals(Boolean.FALSE)
+	  					&& topic.getDraft().equals(Boolean.FALSE)
+	  					&& topic.getLocked().equals(Boolean.FALSE)) {
+	  				return true;
+	  			}
+	  		}
+  		} catch (Exception e) {
+  			LOG.error(e.getMessage(), e);
+  			return false;
+  		}
+  		return false;
+  	}
 
-  /**
-   * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isNewResponseToResponse(org.sakaiproject.api.app.messageforums.DiscussionTopic,
-   *      org.sakaiproject.api.app.messageforums.DiscussionForum)
-   */
-  public boolean isNewResponseToResponse(DiscussionTopic topic,
-      DiscussionForum forum)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("isNewResponseToResponse(DiscussionTopic " + topic
-          + " , DiscussionForum" + forum + ") ");
-    }
 
-    try
-    {
-      if (checkBaseConditions(topic, forum))
-      {
-        return true;
-      }
-      Iterator iter = getTopicItemsByCurrentUser(topic);
-      while (iter.hasNext())
-      {
-        DBMembershipItem item = (DBMembershipItem) iter.next();
-        if (item.getPermissionLevel().getNewResponseToResponse().booleanValue()
-            && forum.getDraft().equals(Boolean.FALSE)
-            && forum.getLocked().equals(Boolean.FALSE)
-            && topic.getDraft().equals(Boolean.FALSE)
-            && topic.getLocked().equals(Boolean.FALSE))
-        {
-          return true;
-        }
-      }
+  	/**
+  	 * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isNewResponseToResponse(org.sakaiproject.api.app.messageforums.DiscussionTopic,
+  	 *      org.sakaiproject.api.app.messageforums.DiscussionForum)
+  	 */
+  	public boolean isNewResponseToResponse(DiscussionTopic topic, DiscussionForum forum) {
+  		return isNewResponseToResponse(topic, forum, getContextId());
+  	}
+  	
+  	public boolean isNewResponseToResponse(DiscussionTopic topic, DiscussionForum forum, String contextId) {
+  	
+  		if (LOG.isDebugEnabled()) {
+  			LOG.debug("isNewResponseToResponse(DiscussionTopic " + topic
+  					+ " , DiscussionForum" + forum + ") ");
+  		}
 
-    }
-    catch (Exception e)
-    {
-      LOG.error(e.getMessage(), e);
-      return false;
-    }
-    return false;
-  }
+  		try {
+  			if (checkBaseConditions(topic, forum, getCurrentUserId(), contextId)) {
+  				return true;
+  			}
+  			Iterator iter = getTopicItemsByUser(topic, getCurrentUserId(), contextId);
+  			while (iter.hasNext()) {
+  				DBMembershipItem item = (DBMembershipItem) iter.next();
+  				if (item.getPermissionLevel().getNewResponseToResponse().booleanValue()
+  						&& forum.getDraft().equals(Boolean.FALSE)
+  						&& forum.getLocked().equals(Boolean.FALSE)
+  						&& topic.getDraft().equals(Boolean.FALSE)
+  						&& topic.getLocked().equals(Boolean.FALSE)) {
+  					return true;
+  				}
+  			}
 
-  /**   
-   * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isMovePostings(org.sakaiproject.api.app.messageforums.DiscussionTopic,
-   *      org.sakaiproject.api.app.messageforums.DiscussionForum)
-   */
-  public boolean isMovePostings(DiscussionTopic topic, DiscussionForum forum)
-  {
-    if (LOG.isDebugEnabled())
-    {
-      LOG.debug("isMovePostings(DiscussionTopic " + topic
-          + "), DiscussionForum" + forum + "");
-    }
+  		} catch (Exception e) {
+  			LOG.error(e.getMessage(), e);
+  			return false;
+  		}
+  		return false;
+  	}
 
-    try
-    {
-      if (checkBaseConditions(topic, forum))
-      {
-        return true;
-      }
-      Iterator iter = getTopicItemsByCurrentUser(topic);
-      while (iter.hasNext())
-      {
-        DBMembershipItem item = (DBMembershipItem) iter.next();
-        if (item.getPermissionLevel().getMovePosting().booleanValue()
-            && forum.getDraft().equals(Boolean.FALSE)
-            && forum.getLocked().equals(Boolean.FALSE)
-            && topic.getDraft().equals(Boolean.FALSE)
-            && topic.getLocked().equals(Boolean.FALSE))
-        {
-          return true;
-        }
-      }
+  	/**   
+  	 * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isMovePostings(org.sakaiproject.api.app.messageforums.DiscussionTopic,
+  	 *      org.sakaiproject.api.app.messageforums.DiscussionForum)
+  	 */
+  	public boolean isMovePostings(DiscussionTopic topic, DiscussionForum forum) {
+  		return isNewResponseToResponse(topic, forum, getContextId());
+  	}
+  	
+  	public boolean isMovePostings(DiscussionTopic topic, DiscussionForum forum, String contextId) {
+  		
+  		if (LOG.isDebugEnabled()) {
+  			LOG.debug("isMovePostings(DiscussionTopic "+topic+"), DiscussionForum"+forum+"");
+  		}
 
-    }
-    catch (Exception e)
-    {
-      LOG.error(e.getMessage(), e);
-      return false;
-    }
-    return false;
-  }
+  		try {
+  			if (checkBaseConditions(topic, forum, getCurrentUserId(), contextId)) {
+  				return true;
+  			}
+  			Iterator iter = getTopicItemsByUser(topic, getCurrentUserId(), contextId);
+  			while (iter.hasNext()) {
+  				DBMembershipItem item = (DBMembershipItem) iter.next();
+  				if (item.getPermissionLevel().getMovePosting().booleanValue()
+  						&& forum.getDraft().equals(Boolean.FALSE)
+  						&& forum.getLocked().equals(Boolean.FALSE)
+  						&& topic.getDraft().equals(Boolean.FALSE)
+  						&& topic.getLocked().equals(Boolean.FALSE)) {
+  					return true;
+  				}
+  			}
 
-  /**
-   * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isChangeSettings(org.sakaiproject.api.app.messageforums.DiscussionTopic,
-   *      org.sakaiproject.api.app.messageforums.DiscussionForum)
-   */
-  public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum) {
+  		} catch (Exception e) {
+  			LOG.error(e.getMessage(), e);
+  			return false;
+  		}
+  		return false;
+  	}
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("isChangeSettings(DiscussionTopic " + topic
-          + "), DiscussionForum" + forum + "");
-    }
+  	/**
+  	 * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isChangeSettings(org.sakaiproject.api.app.messageforums.DiscussionTopic,
+  	 *      org.sakaiproject.api.app.messageforums.DiscussionForum)
+  	 */
+  	public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum) {
+  		
+  		if (LOG.isDebugEnabled()) {
+  			LOG.debug("isChangeSettings(DiscussionTopic "+topic+"), DiscussionForum"+forum+"");
+  		}
     
-    if (isSuperUser()) {
-      return true;
-    }
+  		if (isSuperUser()) {
+  			return true;
+  		}
     
-    String siteId = forumManager.getContextForForumById(forum.getId());
-    if (securityService.unlock(SiteService.SECURE_UPDATE_SITE, siteId)){
-    	return true;
-    }
-    try
-    {
-      // Change Settings on Topic allowed even if the forum is locked
-      // if (forum.getLocked() == null || forum.getLocked().equals(Boolean.TRUE))
-      // {
-      // LOG.debug("This Forum is Locked");
-      // return false;
-      // }
-      // if owner then allow change of settings on the topic or on forum.
-      if (forumManager.isTopicOwner(topic))
-      {
-        return true;
-      }
-      Iterator iter = getTopicItemsByCurrentUser(topic);
-      while (iter.hasNext())
-      {
-        DBMembershipItem item = (DBMembershipItem) iter.next();
-        if (item.getPermissionLevel().getChangeSettings().booleanValue())
-           // && forum.getDraft().equals(Boolean.FALSE)  SAK-9230
-           // && forum.getLocked().equals(Boolean.FALSE)
-           // && topic.getDraft().equals(Boolean.FALSE)
-           // && topic.getLocked().equals(Boolean.FALSE))
-        {
-          return true;
-        }
-      }
+  		String siteId = forumManager.getContextForForumById(forum.getId());
+  		if (securityService.unlock(SiteService.SECURE_UPDATE_SITE, siteId)){
+  			return true;
+  		}
+  		try {
+  			// Change Settings on Topic allowed even if the forum is locked
+  			// if (forum.getLocked() == null || forum.getLocked().equals(Boolean.TRUE))
+  			// {
+  			// LOG.debug("This Forum is Locked");
+  			// return false;
+  			// }
+  			// if owner then allow change of settings on the topic or on forum.
+  			if (forumManager.isTopicOwner(topic)) {
+  				return true;
+  			}
+  			Iterator iter = getTopicItemsByUser(topic, getCurrentUserId(), siteId);
+  			while (iter.hasNext()) {
+  				DBMembershipItem item = (DBMembershipItem) iter.next();
+  				if (item.getPermissionLevel().getChangeSettings().booleanValue())
+  					// && forum.getDraft().equals(Boolean.FALSE)  SAK-9230
+  					// && forum.getLocked().equals(Boolean.FALSE)
+  					// && topic.getDraft().equals(Boolean.FALSE)
+  					// && topic.getLocked().equals(Boolean.FALSE))
+  				{
+  					return true;
+  				}
+  			}
 
-    }
-    catch (Exception e)
-    {
-      LOG.error(e.getMessage(), e);
-      return false;
-    }
-    return false;
-  }
+  		} catch (Exception e) {
+  			LOG.error(e.getMessage(), e);
+  			return false;
+  		}
+  		return false;
+  	}
 
   /** 
    * @see org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager#isPostToGradebook(org.sakaiproject.api.app.messageforums.DiscussionTopic,
@@ -1171,15 +1153,19 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 		return returnSet;
   }
   
-  private Iterator getForumItemsByCurrentUser(DiscussionForum forum)
-  {
+  private Iterator getForumItemsByCurrentUser(DiscussionForum forum) {
+	  return getForumItemsByCurrentUser(forum, getContextId());
+  }
+  private Iterator getForumItemsByCurrentUser(DiscussionForum forum, String contextId) {
+	  
     List forumItems = new ArrayList();
     //Set membershipItems = forum.getMembershipItemSet();
     
 
-		if (ThreadLocalManager.get("message_center_permission_set") == null || !((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue())
+		if (ThreadLocalManager.get("message_center_permission_set") == null || 
+				!((Boolean)ThreadLocalManager.get("message_center_permission_set")).booleanValue())
 		{
-			initMembershipForSite();
+			initMembershipForSite(contextId);
 		}
 
 		Set forumItemsInThread = (Set) ThreadLocalManager.get("message_center_membership_forum");
@@ -1206,10 +1192,8 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 	        }			
 		}
     
-//    DBMembershipItem item = forumManager.getDBMember(membershipItems, getCurrentUserRole(),
-//        DBMembershipItem.TYPE_ROLE);
-		DBMembershipItem item = forumManager.getDBMember(thisForumItemSet, getCurrentUserRole(),
-			DBMembershipItem.TYPE_ROLE);
+		DBMembershipItem item = forumManager.getDBMember(
+				thisForumItemSet, getCurrentUserRole(contextId), DBMembershipItem.TYPE_ROLE, contextId);
     
     if (item != null){
       forumItems.add(item);

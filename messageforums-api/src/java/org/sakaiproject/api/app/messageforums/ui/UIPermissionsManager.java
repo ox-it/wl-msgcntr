@@ -49,18 +49,21 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isNewTopic(DiscussionForum forum);
+  public boolean isNewTopic(DiscussionForum forum, String contextId);
 
   /**
    * @param topic
    * @return
    */
   public boolean isNewResponse(DiscussionTopic topic, DiscussionForum forum);
+  public boolean isNewResponse(DiscussionTopic topic, DiscussionForum forum, String contextId);
 
   /**
    * @param topic
    * @return
    */
   public boolean isNewResponseToResponse(DiscussionTopic topic, DiscussionForum forum);
+  public boolean isNewResponseToResponse(DiscussionTopic topic, DiscussionForum forum, String contextId);
 
   /**
    * @param topic
@@ -73,7 +76,7 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isChangeSettings(DiscussionTopic topic, DiscussionForum forum);
-
+  
   /**
    * @param topic
    * @return

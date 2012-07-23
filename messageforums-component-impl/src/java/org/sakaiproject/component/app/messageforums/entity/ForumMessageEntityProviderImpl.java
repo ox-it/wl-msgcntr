@@ -13,13 +13,11 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.api.app.messageforums.Attachment;
-import org.sakaiproject.api.app.messageforums.BaseForum;
 import org.sakaiproject.api.app.messageforums.DiscussionForum;
 import org.sakaiproject.api.app.messageforums.DiscussionForumService;
 import org.sakaiproject.api.app.messageforums.DiscussionTopic;
 import org.sakaiproject.api.app.messageforums.Message;
 import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
-import org.sakaiproject.api.app.messageforums.OpenForum;
 import org.sakaiproject.api.app.messageforums.PrivateMessage;
 import org.sakaiproject.api.app.messageforums.PrivateMessageRecipient;
 import org.sakaiproject.api.app.messageforums.SynopticMsgcntrManager;
@@ -31,7 +29,6 @@ import org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager;
 import org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager;
 import org.sakaiproject.authz.cover.SecurityService;
 import org.sakaiproject.component.api.ServerConfigurationService;
-import org.sakaiproject.entity.api.ResourcePropertiesEdit;
 import org.sakaiproject.entitybroker.EntityReference;
 import org.sakaiproject.entitybroker.EntityView;
 import org.sakaiproject.entitybroker.entityprovider.annotations.EntityCustomAction;
@@ -46,15 +43,7 @@ import org.sakaiproject.entitybroker.entityprovider.extension.RequestGetter;
 import org.sakaiproject.entitybroker.entityprovider.extension.RequestStorage;
 import org.sakaiproject.entitybroker.entityprovider.search.Restriction;
 import org.sakaiproject.entitybroker.entityprovider.search.Search;
-import org.sakaiproject.event.cover.EventTrackingService;
 import org.sakaiproject.site.cover.SiteService;
-import org.sakaiproject.tool.cover.SessionManager;
-import org.sakaiproject.user.api.User;
-import org.sakaiproject.user.api.UserAlreadyDefinedException;
-import org.sakaiproject.user.api.UserEdit;
-import org.sakaiproject.user.api.UserLockedException;
-import org.sakaiproject.user.api.UserNotDefinedException;
-import org.sakaiproject.user.api.UserPermissionException;
 import org.sakaiproject.user.cover.UserDirectoryService;
 import org.sakaiproject.util.FormattedText;
 import org.sakaiproject.util.ResourceLoader;
@@ -64,6 +53,9 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
     AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, RequestAware, ActionsExecutable {
 
 	private DiscussionForumManager forumManager;
+  	public void setForumManager(DiscussionForumManager forumManager) {
+  		this.forumManager = forumManager;
+  	}
 	
 	/**
 	 * 
@@ -115,8 +107,7 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
   private static final String LAST_REVISE_ON = "cdfm_last_revise_msg_on";
   
 
-
-private RequestStorage requestStorage;
+  private RequestStorage requestStorage;
   public void setRequestStorage(RequestStorage requestStorage) {
       this.requestStorage = requestStorage;
   }
@@ -217,10 +208,6 @@ private RequestStorage requestStorage;
 	  // here though... if you're feeling jumpy feel free.
   }
 
-  	public void setForumManager(DiscussionForumManager forumManager) {
-  		this.forumManager = forumManager;
-  	}
-
   	/**
   	 * 
   	 */
@@ -243,7 +230,11 @@ private RequestStorage requestStorage;
             
       		Message replyToMessage = forumManager.getMessageById(dMessage.getReplyTo());
       		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
-      		DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+      		//DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+      		
+      		if (!forumManager.canUserPostMessage(topic.getId(), "createEntity")) {
+      			throw new SecurityException("Could not create entity, permission denied: " + ref);
+      		}
       		
       		try {
             
@@ -275,8 +266,8 @@ private RequestStorage requestStorage;
       		    	}
       		    	
       		    	aMsg.setTopic(topic);
-      		    	
       		    	aMsg.setInReplyTo(replyToMessage);
+      		    	
       		    	forumManager.saveMessage(aMsg);
       		    	messageId = aMsg.getId();
       		    }
@@ -305,10 +296,6 @@ private RequestStorage requestStorage;
     	if (userId == null || "".equals(userId)){
     		throw new SecurityException("Could not get entity, permission denied: " + ref);
     	}
-    	
-    	//if (!canUserPostMessage("processDfMsgRevisedPost"))  for the user to post for the current topic and forum
-    	//  throw new SecurityException("Could not revise message, permission denied: " + ref);
-	  	//}
 	  
     	String id = ref.getId();
     	if (id == null || "".equals(id)) {
@@ -325,31 +312,11 @@ private RequestStorage requestStorage;
     		DecoratedMessage dMessage = (DecoratedMessage) entity;
     		
     		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
-        	DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+        	//DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
       		
-    		/*
-		 	for (int i = 0; i < prepareRemoveAttach.size(); i++) {
-				DecoratedAttachment removeAttach = (DecoratedAttachment) prepareRemoveAttach.get(i);
-				message.removeAttachment(removeAttach.getAttachment());
-		  	}
-
-		  	List oldList = message.getAttachments();
-		  	for (int i = 0; i < attachments.size(); i++) {  
-				DecoratedAttachment thisAttach = (DecoratedAttachment) attachments.get(i);
-				boolean existed = false;
-				for (int j = 0; j < oldList.size(); j++) {
-					Attachment existedAttach = (Attachment) oldList.get(j);
-			  		if (existedAttach.getAttachmentId()
-							.equals(thisAttach.getAttachment().getAttachmentId())) {
-					  	existed = true;
-					  	break;
-			  		}
-				}
-				if (!existed) {
-			  		message.addAttachment(thisAttach.getAttachment());
-				}
-		  	}
-    		*/
+        	if (!forumManager.canUserPostMessage(topic.getId(), "createEntity")) {
+      			throw new SecurityException("Could not create entity, permission denied: " + ref);
+      		}
 	    		
 			String body = dMessage.getBody();
 			String revisedInfo = "<p class=\"lastRevise textPanelFooter\">" + 
@@ -445,6 +412,10 @@ private RequestStorage requestStorage;
 	  
 	  DiscussionTopic topic = forumManager.getTopicById(message.getTopic().getId());
 	  DiscussionForum forum = forumManager.getForumById(topic.getBaseForum().getId());
+	  
+	  if (!forumManager.canUserPostMessage(topic.getId(), "createEntity")) {
+			throw new SecurityException("Could not create entity, permission denied: " + ref);
+	  }
 	  
 	  String siteId = forumManager.getContextForForumById(forum.getId());
 	  

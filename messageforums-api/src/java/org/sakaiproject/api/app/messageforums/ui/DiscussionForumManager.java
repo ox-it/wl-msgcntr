@@ -587,5 +587,5 @@ public interface DiscussionForumManager
   */
   public Set<String> getUsersAllowedForTopic(Long topicId, boolean checkReadPermission, boolean checkModeratePermission);
   
-
+  public boolean canUserPostMessage(Long topicId, String methodCalled);
 }
