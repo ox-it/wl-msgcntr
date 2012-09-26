@@ -492,6 +492,12 @@
          	<value>#{Components["org.sakaiproject.api.app.messageforums.UserPreferencesManager"]}</value>
         </managed-property>
         
+        <managed-property>
+         	<description>Message Parsing Service</description>
+         	<property-name>messageParsingService</property-name>
+         	<value>#{Components["org.sakaiproject.api.app.messageforums.MessageParsingService"]}</value>
+        </managed-property>
+        
     </managed-bean>
     <managed-bean>
         <description>Private Messages Tool</description>

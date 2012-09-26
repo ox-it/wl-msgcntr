@@ -18,6 +18,7 @@ import org.sakaiproject.api.app.messageforums.DiscussionForumService;
 import org.sakaiproject.api.app.messageforums.DiscussionTopic;
 import org.sakaiproject.api.app.messageforums.Message;
 import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
+import org.sakaiproject.api.app.messageforums.MessageParsingService;
 import org.sakaiproject.api.app.messageforums.PrivateMessage;
 import org.sakaiproject.api.app.messageforums.PrivateMessageRecipient;
 import org.sakaiproject.api.app.messageforums.SynopticMsgcntrManager;
@@ -97,6 +98,15 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
 	public void setServerConfigurationService(
 			ServerConfigurationService serverConfigurationService) {
 		this.serverConfigurationService = serverConfigurationService;
+	}
+	
+  	/**
+  	 * 
+  	 */
+	private MessageParsingService messageParsingService;
+	public void setMessageParsingService(
+			MessageParsingService messageParsingService) {
+		this.messageParsingService = messageParsingService;
 	}
   
   private static final Log LOG = LogFactory.getLog(ForumMessageEntityProviderImpl.class);
@@ -234,20 +244,23 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
             
       		Message replyToMessage = forumManager.getMessageById(dMessage.getReplyTo());
       		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
-      		//DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+      		
       		
       		if (!forumManager.canUserPostMessage(topic.getId(), "createEntity")) {
       			throw new SecurityException("Could not create entity, permission denied: " + ref);
       		}
-      		
       		try {
-            
+      			// We only handle discussion messages :-(
       		    Message aMsg = messageManager.createDiscussionMessage();
+      		    DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
       		    
       		    if (aMsg != null) {
       		    	StringBuilder alertMsg = new StringBuilder();
       		    	aMsg.setTitle(FormattedText.processFormattedText(dMessage.getTitle(), alertMsg));
-      		    	aMsg.setBody(FormattedText.processFormattedText(dMessage.getBody(), alertMsg));
+      		    	String body = (forum.getMarkupFree())?
+      		    			messageParsingService.parse(dMessage.getBody()):
+      		    			FormattedText.processFormattedText(dMessage.getBody(), alertMsg);
+      		    	aMsg.setBody(body);
       		      
       		    	if (userId!=null) {
       		    		aMsg.setAuthor(getUserNameOrEid());
@@ -265,7 +278,7 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
       		    	// if the author has moderator perm, the msg is automatically approved\
       		      
       		    	if (!(topic.getModerated().booleanValue() && 
-      		    			uiPermissionsManager.isModeratePostings(topic, (DiscussionForum) topic.getBaseForum()))) {
+      		    			uiPermissionsManager.isModeratePostings(topic, forum))) {
       		    		aMsg.setApproved(Boolean.TRUE);
       		    	}
       		    	
@@ -316,27 +329,38 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
     		DecoratedMessage dMessage = (DecoratedMessage) entity;
     		
     		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
-        	//DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+        	DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
       		
-        	if (!forumManager.canUserPostMessage(topic.getId(), "createEntity")) {
+    		if(!uiPermissionsManager.isReviseAny(topic, forum) && !(message.getCreatedBy().equals(userId)
+    				&& uiPermissionsManager.isReviseOwn(topic, forum))) {
       			throw new SecurityException("Could not create entity, permission denied: " + ref);
-      		}
-	    		
-			String body = dMessage.getBody();
-			String revisedInfo = "<p class=\"lastRevise textPanelFooter\">" + 
-					getResourceBundleString(LAST_REVISE_BY);
+    		}
+    		
+    		// This is duplicated from the tool and should be refactored out into the service.
+			String revisedInfo = getResourceBundleString(LAST_REVISE_BY);
 
 			revisedInfo += getUserNameOrEid();
 
 			revisedInfo  += " " + getResourceBundleString(LAST_REVISE_ON);
 			Date now = new Date();
-			revisedInfo += now.toString() + " </p> ";
-    
-			revisedInfo = revisedInfo.concat(body);
+			revisedInfo += now.toString();
+			
+			// Need a different header if it's a markup free forum.
+			if (forum.getMarkupFree())
+			{
+				revisedInfo = revisedInfo + "\n";
+			} else {
+				revisedInfo = "<p class=\"lastRevise textPanelFooter\">"+ revisedInfo + " </p>";
+			}
+
+			revisedInfo = revisedInfo.concat(dMessage.getBody());
 
 			StringBuilder alertMsg = new StringBuilder();
 			message.setTitle(FormattedText.processFormattedText(dMessage.getTitle(), alertMsg));
-			message.setBody(FormattedText.processFormattedText(revisedInfo, alertMsg));
+			String filteredBody = forum.getMarkupFree()?
+					messageParsingService.parse(revisedInfo):
+					FormattedText.processFormattedText(revisedInfo, alertMsg);
+			message.setBody(filteredBody);
 			message.setDraft(Boolean.FALSE);
 			message.setModified(new Date());
 			  	
@@ -365,10 +389,11 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
 	  if (null == message) {
 		  throw new IllegalArgumentException("IdUnusedException in Resource Entity Provider");
 	  }
-	  if (null == message.getTopic()) {
-		  
+	  DiscussionTopic topic = forumManager.getTopicById(message.getTopic().getId());
+	  if (null == topic) {
 		  throw new IllegalArgumentException("IdInvalidException in Resource Entity Provider");
 	  }
+	  DiscussionForum forum = forumManager.getForumById(topic.getBaseForum().getId());
 	  DecoratedMessage dMessage = null;
 	  
 	  if (!message.getDeleted()){
@@ -386,9 +411,12 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
 		  if(readStatus == null)
 			  readStatus = Boolean.FALSE;
 	  
+		  
 		  dMessage = 
-				  new DecoratedMessage(message.getId(), message.getTopic().getId(), message.getTitle(),
-						  message.getBody(), "" + message.getModified().getTime(),
+				  new DecoratedMessage(message.getId(), message.getTopic().getId(),
+						  message.getTitle(),
+						  forum.getMarkupFree() ? messageParsingService.format(message.getBody()) : message.getBody(), 
+						  "" + message.getModified().getTime(),
 						  attachments, Collections.EMPTY_LIST, 
 						  message.getAuthor(), getProfileImageURL(message.getAuthorId()),
 						  message.getInReplyTo() == null ? null : message.getInReplyTo().getId(),
@@ -476,6 +504,8 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
 	  List<DecoratedMessage> replies = new ArrayList<DecoratedMessage>();
 
 	  for (Message message : messages) {
+		  DiscussionTopic dTopic = forumManager.getTopicById(message.getTopic().getId());
+		  DiscussionForum dForum = forumManager.getForumById(dTopic.getBaseForum().getId());
 		  if(message.getInReplyTo() != null){
 			  if(messageId.equals(message.getInReplyTo().getId())){
 				  if(!message.getDeleted()){
@@ -490,8 +520,10 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
 						  readStatus = Boolean.FALSE;
 
 					  DecoratedMessage dMessage = new DecoratedMessage(message
-							  .getId(), topicId, message.getTitle(),
-							  message.getBody(), "" + message.getModified().getTime(),
+							  .getId(), topicId, 
+							  message.getTitle(),
+							  dForum.getMarkupFree() ? messageParsingService.format(message.getBody()) : message.getBody(), 
+							  "" + message.getModified().getTime(),
 							  attachments, findReplies(messages, message.getId(),
 									  topicId, msgIdReadStatusMap), 
 									  message.getAuthor(), getProfileImageURL(message.getAuthorId()),
@@ -596,8 +628,10 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
 								  readStatus = Boolean.FALSE;
 
 							  DecoratedMessage dMessage = new DecoratedMessage(message
-									  .getId(), new Long(topicId), message.getTitle(),
-									  message.getBody(), "" + message.getModified().getTime(),
+									  .getId(), new Long(topicId),
+									  message.getTitle(),
+									  dForum.getMarkupFree() ? messageParsingService.format(message.getBody()) : message.getBody(), 
+									  "" + message.getModified().getTime(),
 									  attachments, findReplies(messages, message.getId(),
 											  new Long(topicId), msgIdReadStatusMap), 
 											  message.getAuthor(), getProfileImageURL(message.getAuthorId()),

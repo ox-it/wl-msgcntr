@@ -78,6 +78,7 @@ import org.sakaiproject.api.app.messageforums.Message;
 import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
 import org.sakaiproject.api.app.messageforums.MessageMoveHistory;
+import org.sakaiproject.api.app.messageforums.MessageParsingService;
 import org.sakaiproject.api.app.messageforums.OpenForum;
 import org.sakaiproject.api.app.messageforums.PermissionLevel;
 import org.sakaiproject.api.app.messageforums.PermissionLevelManager;
@@ -133,6 +134,7 @@ import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.cover.SiteService;
 import org.sakaiproject.thread_local.cover.ThreadLocalManager;
 import org.sakaiproject.tool.api.Placement;
+import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.ToolSession;
 import org.sakaiproject.tool.cover.SessionManager;
 import org.sakaiproject.tool.cover.ToolManager;
@@ -201,14 +203,12 @@ public class DiscussionForumTool
 
   private DiscussionForumBean selectedForum;
   private DiscussionTopicBean selectedTopic;
-  private DiscussionTopicBean searchResults;
   private DiscussionMessageBean selectedMessage;
   private String selectedGradedUserId;
   private DiscussionAreaBean template;
   private DiscussionMessageBean selectedThreadHead;
   private List selectedThread = new ArrayList();
   private UIData  forumTable;
-  private List groupsUsersList;   
   private List totalGroupsUsersList;
   private List selectedGroupsUsersList;
   private Map courseMemberMap;
@@ -375,6 +375,7 @@ public class DiscussionForumTool
   private SynopticMsgcntrManager synopticMsgcntrManager;
   private UserPreferencesManager userPreferencesManager;
   private ContentHostingService contentHostingService;
+  private MessageParsingService messageParsingService;
   
   private Boolean instructor = null;
   private Boolean sectionTA = null;
@@ -495,10 +496,8 @@ public class DiscussionForumTool
   /**
    * @param forumManager
    */
-  public void setForumManager(DiscussionForumManager forumManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
+  public void setForumManager(DiscussionForumManager forumManager) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("setForumManager(DiscussionForumManager " + forumManager + ")");
     }
     this.forumManager = forumManager;
@@ -508,10 +507,8 @@ public class DiscussionForumTool
    * @param uiPermissionsManager
    *          The uiPermissionsManager to set.
    */
-  public void setUiPermissionsManager(UIPermissionsManager uiPermissionsManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
+  public void setUiPermissionsManager(UIPermissionsManager uiPermissionsManager) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("setUiPermissionsManager(UIPermissionsManager "
           + uiPermissionsManager + ")");
     }
@@ -521,8 +518,7 @@ public class DiscussionForumTool
   /**
    * @param typeManager The typeManager to set.
    */
-  public void setTypeManager(MessageForumsTypeManager typeManager)
-  {
+  public void setTypeManager(MessageForumsTypeManager typeManager) {
     this.typeManager = typeManager;
   }
   
@@ -531,16 +527,14 @@ public class DiscussionForumTool
   /**
    * @param membershipManager The membershipManager to set.
    */
-  public void setMembershipManager(MembershipManager membershipManager)
-  {
+  public void setMembershipManager(MembershipManager membershipManager) {
     this.membershipManager = membershipManager;
   }
 
   /**
    * @return
    */
-  public String processActionHome()
-  {
+  public String processActionHome() {
     LOG.debug("processActionHome()");
    	reset();
     return gotoMain();
@@ -549,11 +543,9 @@ public class DiscussionForumTool
   /**
    * @return
    */
-  public boolean isInstructor()
-  {
+  public boolean isInstructor() {
     LOG.debug("isInstructor()");
-    if (instructor == null)
-    {
+    if (instructor == null) {
     	instructor = forumManager.isInstructor();
     }
     return instructor.booleanValue();
@@ -562,11 +554,9 @@ public class DiscussionForumTool
   /**
    * @return
    */
-  public boolean isSectionTA()
-  {
+  public boolean isSectionTA() {
     LOG.debug("isSectionTA()");
-    if (sectionTA == null)
-    {
+    if (sectionTA == null) {
     	sectionTA = forumManager.isSectionTA();
     }
     return sectionTA.booleanValue();
@@ -2360,7 +2350,7 @@ public class DiscussionForumTool
 	  {
 		 String messageBody= selectedMessage.getMessage().getBody();
 		 String messageBodyWithoutLastEmptyLine=formatStringByRemoveLastEmptyLine(messageBody);
-		 selectedMessage.getMessage().setBody(messageBodyWithoutLastEmptyLine); 		 
+		 selectedMessage.getMessage().setBody(messageBodyWithoutLastEmptyLine);
 	  }
     return selectedMessage;
   }
@@ -3882,7 +3872,8 @@ public class DiscussionForumTool
     {
       StringBuilder alertMsg = new StringBuilder();
       aMsg.setTitle(getComposeTitle());
-      aMsg.setBody(FormattedText.processFormattedText(getComposeBody(), alertMsg));
+      
+      aMsg.setBody(transformBody(getComposeBody()));
       
       if(getUserNameOrEid()!=null){
       aMsg.setAuthor(getUserNameOrEid());
@@ -4408,7 +4399,12 @@ public class DiscussionForumTool
 	
     attachments.clear();
 
-    composeBody = selectedMessage.getMessage().getBody();
+    if (selectedForum.getMarkupFree()) {
+    	composeBody = messageParsingService.format(selectedMessage.getMessage().getBody());
+    } else {
+    	composeBody = selectedMessage.getMessage().getBody();
+    }
+    
     composeLabel = selectedMessage.getMessage().getLabel();
     composeTitle = selectedMessage.getMessage().getTitle();
     List attachList = selectedMessage.getMessage().getAttachments();
@@ -4771,19 +4767,26 @@ public class DiscussionForumTool
 		// optionally include the revision history. by default, revision history is included
 		boolean showRevisionHistory = ServerConfigurationService.getBoolean("msgcntr.forums.showRevisionHistory",true);
 		if (showRevisionHistory) {
-		    String revisedInfo = "<p class=\"lastRevise textPanelFooter\">" + getResourceBundleString(LAST_REVISE_BY);
+		   String revisedInfo = getResourceBundleString(LAST_REVISE_BY);
 	        revisedInfo += getUserNameOrEid();
 	        revisedInfo  += " " + getResourceBundleString(LAST_REVISE_ON);
 	        SimpleDateFormat formatter = new SimpleDateFormat(getResourceBundleString("date_format"), getUserLocale());
 	        formatter.setTimeZone(getUserTimeZone());
 	        Date now = new Date();
-	        revisedInfo += formatter.format(now) + " </p> ";
+	        revisedInfo += formatter.format(now);
+             // Need a different header if it's a markup free forum.
+             if (dfForum.getMarkupFree())
+             {
+               revisedInfo = revisedInfo + "\n";
+             } else {
+               revisedInfo = "<p class=\"lastRevise textPanelFooter\">"+ revisedInfo + " </p>";
+             }
 	        currentBody = revisedInfo.concat(currentBody);
 		} 
 
 		StringBuilder alertMsg = new StringBuilder();
 		dMsg.setTitle(getComposeTitle());
-		dMsg.setBody(FormattedText.processFormattedText(currentBody, alertMsg));
+		dMsg.setBody(transformBody(currentBody));
 		dMsg.setDraft(Boolean.FALSE);
 		dMsg.setModified(new Date());
 
@@ -4922,6 +4925,7 @@ public class DiscussionForumTool
 		      currentBody = revisedInfo.concat(currentBody);
 		  }
 
+             // TODO, why no filtering here?
 		  dMsg.setBody(currentBody);
 		  dMsg.setTitle(getComposeTitle());
 		  dMsg.setDraft(Boolean.TRUE);
@@ -8353,6 +8357,10 @@ public class DiscussionForumTool
 		this.userPreferencesManager = userPreferencesManager;
 	}
 
+	public void setMessageParsingService(MessageParsingService messageParsingService) {
+		this.messageParsingService = messageParsingService;
+	}
+
     /**
    * Forward to duplicate forum confirmation screen
    *
@@ -8745,8 +8753,7 @@ public class DiscussionForumTool
 	}
 
 
-	public String getButtonSet()
-	{
+	public String getButtonSet() {
 		String rv = new Boolean(selectedForum.getMarkupFree()).booleanValue() ?"Minimal":"Default"; 
 		return rv;
 	}
@@ -8982,6 +8989,15 @@ public class DiscussionForumTool
                 && area.getAvailability();
     }
     
+	public String getTextOnly() {
+		Session session = SessionManager.getCurrentSession();
+		String rv = (session.getAttribute("is_wireless_device") != null &&
+					((Boolean) session.getAttribute("is_wireless_device")).booleanValue()) ||
+					selectedForum.getMarkupFree() ? 
+							"true":"false"; 
+		return rv;
+	}
+	
 	public String getServerUrl() {
 		return ServerConfigurationService.getServerUrl();
 	}
@@ -9856,5 +9872,26 @@ public class DiscussionForumTool
     public boolean isAlwaysShowFullDesc(){
     	return ServerConfigurationService.getBoolean("mc.alwaysShowFullDesc", false); 
     }
+	
+	/**
+	 * This takes some body content and processes it.
+	 * If it's a plain text forum it gets escaped.
+	 */
+	public String transformBody(String content) {
+		boolean markupFree = false;
+		DiscussionForumBean forum = getSelectedForum();
+		// Topic might be null if it's a PrivateMessage
+		if (forum != null) {
+			markupFree = Boolean.valueOf(forum.getMarkupFree());
+		} else {
+			LOG.warn("No forum to find the markup free flag from.");
+		}
+		if (markupFree) {
+			return messageParsingService.parse(content);
+		} else {
+			return FormattedText.processFormattedText(content, new StringBuilder());
+		}
+
+	}
 }
 
