@@ -292,8 +292,6 @@
 		        <property name="messageParsingService">
         		    <ref bean="org.sakaiproject.api.app.messageforums.MessageParsingService"/>
         		</property>
-        		<lookup-method name="discussionForumManager" 
-                	bean="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" />
             </bean>            
         </property>
          <property name="transactionAttributes">
