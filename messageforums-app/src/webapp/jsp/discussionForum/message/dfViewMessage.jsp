@@ -120,8 +120,8 @@
 					</h:commandLink>
 				</p>
 				<mf:htmlShowArea value="#{ForumTool.selectedTopic.topic.extendedDescription}" 
-					rendered="#{ForumTool.selectedTopic.readFullDesciption}" 
-					hideBorder="true"/>
+					             rendered="#{ForumTool.selectedTopic.readFullDesciption}" 
+					             hideBorder="true"/>
 			</div>
 			<h:messages globalOnly="true" infoClass="success" errorClass="alertMessage" />
 

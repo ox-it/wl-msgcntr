@@ -291,7 +291,9 @@
 		        </property>
 		        <property name="messageParsingService">
         		    <ref bean="org.sakaiproject.api.app.messageforums.MessageParsingService"/>
-		        </property>
+        		</property>
+        		<lookup-method name="discussionForumManager" 
+                	bean="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" />
             </bean>            
         </property>
          <property name="transactionAttributes">
@@ -499,7 +501,8 @@
     </bean>
 
     <bean id="org.sakaiproject.api.app.messageforums.ForumMessageEntityProvider" class="org.sakaiproject.component.app.messageforums.entity.ForumMessageEntityProviderImpl">
-		<property name="forumManager" ref="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" />
+		<property name="forumManager" 
+			ref="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" />
 		<property name="privateMessageManager">
           <ref bean="org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager"/>
       	</property>
@@ -511,6 +514,9 @@
         </property>
         <property name="serverConfigurationService">
             <ref bean="org.sakaiproject.component.api.ServerConfigurationService" />
+        </property>
+        <property name="messageParsingService">
+        	<ref bean="org.sakaiproject.api.app.messageforums.MessageParsingService"/>
         </property>
     </bean>
 

@@ -61,9 +61,9 @@
 								there is no longer need for the long description context (or as much), so do not put it in
 								the response by default - same goes for attachment list if any --%>
 			<mf:htmlShowArea value="#{ForumTool.selectedTopic.topic.extendedDescription}" 
-		                   rendered="#{ForumTool.selectedTopic.readFullDesciption}"
-		                   id="topic_extended_description" 
-									hideBorder="true" />
+		                    rendered="#{ForumTool.selectedTopic.readFullDesciption}"
+		                    id="topic_extended_description" 
+							hideBorder="true" />
 						</div>
 					</td>
 				</tr>
@@ -94,7 +94,7 @@
 			<span style="margin-left:3em"><img src="/library/image/silk/table_add.png" />&nbsp;<h:outputText value="#{msgs.cdfm_message_count}" />:&nbsp;<span  id="counttotal"> </span></span>
 					
 
-	            <sakai:inputRichText textareaOnly="#{PrivateMessagesTool.mobileSession}" buttonSet="#{ForumTool.buttonSet}" value="#{ForumTool.composeBody}" id="df_compose_body" rows="22" cols="120">
+	            <sakai:inputRichText textareaOnly="#{ForumTool.textOnly}" buttonSet="#{ForumTool.buttonSet}" value="#{ForumTool.composeBody}" id="df_compose_body" rows="22" cols="120">
 					<f:validateLength maximum="65000"/>
 				</sakai:inputRichText>
 <%--********************* Attachment *********************--%>	

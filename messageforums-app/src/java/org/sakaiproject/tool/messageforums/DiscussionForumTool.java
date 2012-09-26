@@ -60,6 +60,7 @@ import org.sakaiproject.api.app.messageforums.MembershipManager;
 import org.sakaiproject.api.app.messageforums.Message;
 import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
 import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
+import org.sakaiproject.api.app.messageforums.MessageParsingService;
 import org.sakaiproject.api.app.messageforums.OpenForum;
 import org.sakaiproject.api.app.messageforums.PermissionLevel;
 import org.sakaiproject.api.app.messageforums.PermissionLevelManager;
@@ -93,6 +94,7 @@ import org.sakaiproject.site.api.Group;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.cover.SiteService;
 import org.sakaiproject.thread_local.cover.ThreadLocalManager;
+import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.ToolSession;
 import org.sakaiproject.tool.cover.SessionManager;
 import org.sakaiproject.tool.cover.ToolManager;
@@ -155,13 +157,11 @@ public class DiscussionForumTool
 
   private DiscussionForumBean selectedForum;
   private DiscussionTopicBean selectedTopic;
-  private DiscussionTopicBean searchResults;
   private DiscussionMessageBean selectedMessage;
   private DiscussionAreaBean template;
   private DiscussionMessageBean selectedThreadHead;
   private List selectedThread = new ArrayList();
   private UIData  forumTable;
-  private List groupsUsersList;   
   private List totalGroupsUsersList;
   private List selectedGroupsUsersList;
   private Map courseMemberMap;
@@ -313,6 +313,7 @@ public class DiscussionForumTool
   private EmailNotificationManager emailNotificationManager;
   private SynopticMsgcntrManager synopticMsgcntrManager;
   private UserPreferencesManager userPreferencesManager;
+  private MessageParsingService messageParsingService;
   
   private Boolean instructor = null;
   private Boolean sectionTA = null;
@@ -395,10 +396,8 @@ public class DiscussionForumTool
   /**
    * @param forumManager
    */
-  public void setForumManager(DiscussionForumManager forumManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
+  public void setForumManager(DiscussionForumManager forumManager) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("setForumManager(DiscussionForumManager " + forumManager + ")");
     }
     this.forumManager = forumManager;
@@ -408,10 +407,8 @@ public class DiscussionForumTool
    * @param uiPermissionsManager
    *          The uiPermissionsManager to set.
    */
-  public void setUiPermissionsManager(UIPermissionsManager uiPermissionsManager)
-  {
-    if (LOG.isDebugEnabled())
-    {
+  public void setUiPermissionsManager(UIPermissionsManager uiPermissionsManager) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("setUiPermissionsManager(UIPermissionsManager "
           + uiPermissionsManager + ")");
     }
@@ -421,8 +418,7 @@ public class DiscussionForumTool
   /**
    * @param typeManager The typeManager to set.
    */
-  public void setTypeManager(MessageForumsTypeManager typeManager)
-  {
+  public void setTypeManager(MessageForumsTypeManager typeManager) {
     this.typeManager = typeManager;
   }
   
@@ -431,16 +427,14 @@ public class DiscussionForumTool
   /**
    * @param membershipManager The membershipManager to set.
    */
-  public void setMembershipManager(MembershipManager membershipManager)
-  {
+  public void setMembershipManager(MembershipManager membershipManager) {
     this.membershipManager = membershipManager;
   }
 
   /**
    * @return
    */
-  public String processActionHome()
-  {
+  public String processActionHome() {
     LOG.debug("processActionHome()");
    	reset();
     return gotoMain();
@@ -449,11 +443,9 @@ public class DiscussionForumTool
   /**
    * @return
    */
-  public boolean isInstructor()
-  {
+  public boolean isInstructor() {
     LOG.debug("isInstructor()");
-    if (instructor == null)
-    {
+    if (instructor == null) {
     	instructor = forumManager.isInstructor();
     }
     return instructor.booleanValue();
@@ -462,11 +454,9 @@ public class DiscussionForumTool
   /**
    * @return
    */
-  public boolean isSectionTA()
-  {
+  public boolean isSectionTA() {
     LOG.debug("isSectionTA()");
-    if (sectionTA == null)
-    {
+    if (sectionTA == null) {
     	sectionTA = forumManager.isSectionTA();
     }
     return sectionTA.booleanValue();
@@ -2244,7 +2234,7 @@ public class DiscussionForumTool
 	  {
 		 String messageBody= selectedMessage.getMessage().getBody();
 		 String messageBodyWithoutLastEmptyLine=formatStringByRemoveLastEmptyLine(messageBody);
-		 selectedMessage.getMessage().setBody(messageBodyWithoutLastEmptyLine); 		 
+		 selectedMessage.getMessage().setBody(messageBodyWithoutLastEmptyLine);
 	  }
     return selectedMessage;
   }
@@ -4067,7 +4057,12 @@ public class DiscussionForumTool
 	
     attachments.clear();
 
-    composeBody = selectedMessage.getMessage().getBody();
+    if (Boolean.parseBoolean(selectedForum.getMarkupFree())) {
+    	composeBody = messageParsingService.format(selectedMessage.getMessage().getBody());
+    } else {
+    	composeBody = selectedMessage.getMessage().getBody();
+    }
+    
     composeLabel = selectedMessage.getMessage().getLabel();
     composeTitle = selectedMessage.getMessage().getTitle();
     List attachList = selectedMessage.getMessage().getAttachments();
@@ -4419,7 +4414,7 @@ public class DiscussionForumTool
 
 		revisedInfo  += " " + getResourceBundleString(LAST_REVISE_ON);
 		Date now = new Date();
-		revisedInfo += now.toString() + " </p> ";
+		revisedInfo += now.toString() + " </p>";
 
 		/*    if(currentBody != null && currentBody.length()>0 && currentBody.startsWith("Last Revised By "))
     {
@@ -7834,6 +7829,10 @@ public class DiscussionForumTool
 		this.userPreferencesManager = userPreferencesManager;
 	}
 	
+	public void setMessageParsingService(MessageParsingService messageParsingService) {
+		this.messageParsingService = messageParsingService;
+	}
+	
 	/**
 	 * 
 	 * @param msg
@@ -7851,9 +7850,17 @@ public class DiscussionForumTool
         return threadHead;
 	}
 		
-	public String getButtonSet()
-	{
+	public String getButtonSet() {
 		String rv = new Boolean(selectedForum.getMarkupFree()).booleanValue() ?"Minimal":"Default"; 
+		return rv;
+	}
+	
+	public String getTextOnly() {
+		Session session = SessionManager.getCurrentSession();
+		String rv = (session.getAttribute("is_wireless_device") != null &&
+					((Boolean) session.getAttribute("is_wireless_device")).booleanValue()) ||
+					Boolean.parseBoolean(selectedForum.getMarkupFree()) ? 
+							"true":"false"; 
 		return rv;
 	}
 	
