@@ -8,6 +8,7 @@ public class MessageParsingServiceImpl implements MessageParsingService {
 	public String parse(String message) {
 		String withMarkup = message.replaceAll("\\r", "");
 		withMarkup = withMarkup.replaceAll("\\n", "<br />");
+		withMarkup = withMarkup.replaceAll( "</?a[^>]*>", "" );
 		withMarkup = withMarkup.replaceAll("(@)?((https?|ftps?)://)?[a-zA-Z_0-9\\-]+(\\.\\w[a-zA-Z_0-9\\-]+)+(/[#&\\n\\-=?\\+\\%/\\.\\w]+)?", "<a href='$0'>$0</a>");
 		return withMarkup;
 	}
