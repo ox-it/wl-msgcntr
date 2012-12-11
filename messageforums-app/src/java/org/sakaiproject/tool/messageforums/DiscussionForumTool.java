@@ -4408,13 +4408,21 @@ public class DiscussionForumTool
 			}
 		}
 		String currentBody = getComposeBody();
-		String revisedInfo = "<p class=\"lastRevise textPanelFooter\">" + getResourceBundleString(LAST_REVISE_BY);
+		String revisedInfo = getResourceBundleString(LAST_REVISE_BY);
 
 		revisedInfo += getUserNameOrEid();
 
 		revisedInfo  += " " + getResourceBundleString(LAST_REVISE_ON);
 		Date now = new Date();
-		revisedInfo += now.toString() + " </p>";
+		revisedInfo += now.toString();
+		
+		// Need a different header if it's a markup free forum.
+		if (dfForum.getMarkupFree())
+		{
+			revisedInfo = revisedInfo + "\n";
+		} else {
+			revisedInfo = "<p class=\"lastRevise textPanelFooter\">"+ revisedInfo + " </p>";
+		}
 
 		/*    if(currentBody != null && currentBody.length()>0 && currentBody.startsWith("Last Revised By "))
     {
