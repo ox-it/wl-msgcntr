@@ -10,7 +10,7 @@ public class MessageParsingServiceImpl implements MessageParsingService {
 
 	private Pattern brCleanup = Pattern.compile("<\\s*br\\s*[^<>]?>", Pattern.CASE_INSENSITIVE);
 	// Key is to look for a domain name which ends in 2 or 3 characters.
-	private Pattern findURLs = Pattern.compile("\\(?((?:https?|ftps?)://)?(?:[\\w\\-]+\\.)+([a-z]{2,4})(:\\d+)?(/[#&\\-=?\\+\\%/\\.\\w()]*)?");
+	private Pattern findURLs = Pattern.compile("(?<=\\s|>|;|^)((?:http|ftp)s?://)?+(?:[\\w-]+\\.)+([a-z]{2,4})(:\\d+)?(/[-#&=?+%/.\\w()]*+)?(?=\\s|\\.|$)");
 	
 	public String parse(String message) {
 		String withMarkup = message.replaceAll("\\r", "");
