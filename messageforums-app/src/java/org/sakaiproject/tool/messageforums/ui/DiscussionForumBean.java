@@ -237,6 +237,15 @@ public class DiscussionForumBean
 	  LOG.debug("getMarkupFree()");
 	  return Boolean.toString(forum.getMarkupFree());
   }
+
+  /**
+   * Return whether or not the forum is markup free.
+   */
+  public boolean isMarkupFree()
+  {
+	  LOG.debug("isMarkupFree()");
+	  return forum.getMarkupFree();
+  }
   
   /**
    * Set the forum to accept text only messages.
