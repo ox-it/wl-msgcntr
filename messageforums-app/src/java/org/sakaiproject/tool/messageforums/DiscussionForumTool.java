@@ -3599,16 +3599,7 @@ public class DiscussionForumTool
       StringBuilder alertMsg = new StringBuilder();
       aMsg.setTitle(FormattedText.processFormattedText(getComposeTitle(), alertMsg));
       
-      boolean markupFree = false;
-      DiscussionForumBean forum = getSelectedForum();
-      // Topic might be null if it's a PrivateMessage
-      if (forum != null) {
-      	markupFree = forum.isMarkupFree();
-      } else {
-        LOG.warn("No forum to find the markup free flag from.");
-      }
       aMsg.setBody(transformBody(getComposeBody()));
-      
       
       if(getUserNameOrEid()!=null){
       aMsg.setAuthor(getUserNameOrEid());
