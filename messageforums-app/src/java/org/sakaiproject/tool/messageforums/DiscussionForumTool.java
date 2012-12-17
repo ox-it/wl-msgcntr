@@ -3598,7 +3598,17 @@ public class DiscussionForumTool
     {
       StringBuilder alertMsg = new StringBuilder();
       aMsg.setTitle(FormattedText.processFormattedText(getComposeTitle(), alertMsg));
-      aMsg.setBody(FormattedText.processFormattedText(getComposeBody(), alertMsg));
+      
+      boolean markupFree = false;
+      DiscussionForumBean forum = getSelectedForum();
+      // Topic might be null if it's a PrivateMessage
+      if (forum != null) {
+      	markupFree = forum.isMarkupFree();
+      } else {
+        LOG.warn("No forum to find the markup free flag from.");
+      }
+      aMsg.setBody(transformBody(getComposeBody()));
+      
       
       if(getUserNameOrEid()!=null){
       aMsg.setAuthor(getUserNameOrEid());
@@ -4436,7 +4446,7 @@ public class DiscussionForumTool
 
 		StringBuilder alertMsg = new StringBuilder();
 		dMsg.setTitle(FormattedText.processFormattedText(getComposeTitle(), alertMsg));
-		dMsg.setBody(FormattedText.processFormattedText(revisedInfo, alertMsg));
+		dMsg.setBody(transformBody(revisedInfo));
 		dMsg.setDraft(Boolean.FALSE);
 		dMsg.setModified(new Date());
 
@@ -4568,6 +4578,7 @@ public class DiscussionForumTool
 		  revisedInfo = revisedInfo.concat(currentBody);
 
 		  dMsg.setTitle(getComposeTitle());
+		  // TODO, why no filtering here?
 		  dMsg.setBody(revisedInfo);
 		  dMsg.setDraft(Boolean.TRUE);
 		  dMsg.setModified(new Date());
@@ -7882,6 +7893,27 @@ public class DiscussionForumTool
 		} else {
 			return false;
 		}
+	}
+	
+	/**
+	 * This takes some body content and processes it.
+	 * If it's a plain text forum it gets escaped.
+	 */
+	public String transformBody(String content) {
+		boolean markupFree = false;
+		DiscussionForumBean forum = getSelectedForum();
+		// Topic might be null if it's a PrivateMessage
+		if (forum != null) {
+			markupFree = forum.isMarkupFree();
+		} else {
+			LOG.warn("No forum to find the markup free flag from.");
+		}
+		if (markupFree) {
+			return messageParsingService.parse(content);
+		} else {
+			return FormattedText.processFormattedText(content, new StringBuilder());
+		}
+
 	}
 }
 
