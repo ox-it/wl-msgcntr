@@ -9,10 +9,11 @@ import org.sakaiproject.util.FormattedText;
 public class MessageParsingServiceImpl implements MessageParsingService {
 
 	private Pattern brCleanup = Pattern.compile("<\\s*br\\s*[^<>]?>", Pattern.CASE_INSENSITIVE);
-	// Key is to look for a domain name which ends in 2 or 3 characters.
-	private Pattern findURLs = Pattern.compile("(?<=\\s|>|;|^)((?:http|ftp)s?://)?+(?:[\\w-]+\\.)+([a-z]{2,4})(:\\d+)?(/[-#&=?+%/.\\w()]*+)?(?=\\s|\\.|$)");
+	// Key is to look for a domain name which ends in 2 or 4 characters.
+	private Pattern findURLs = Pattern.compile("(?<=\\s|>|;|\\(|^)((?:http|ftp)s?://)?+(?:[\\w-]+\\.)+([a-z]{2,4})(:\\d+)?(/[-#;&=?+%/\\.\\w\\(\\)]*)?(?=\\s|\\.|\\)|<|,|;|$)");
 	
 	public String parse(String message) {
+		// Get rid of form feeds.
 		String withMarkup = message.replaceAll("\\r", "");
 		
 		// We don't replace &quot; as it doesn't get decoded.
@@ -22,7 +23,6 @@ public class MessageParsingServiceImpl implements MessageParsingService {
 		
 		
 		withMarkup = withMarkup.replaceAll("\\n", "<br />");
-		//withMarkup = withMarkup.replaceAll( "</?a[^>]*>", "" );
 		withMarkup = markupURLs(withMarkup);
 		return withMarkup;
 	}
@@ -32,17 +32,32 @@ public class MessageParsingServiceImpl implements MessageParsingService {
 		StringBuffer out = new StringBuffer();
 		while (urls.find()) {
 			String url = urls.group();
+			String trimmed = "";
+
+			if (url.endsWith(",")) {
+				url = url.substring(0, url.length() - 1);
+				trimmed = ','+trimmed;
+			}
+			
+			if (url.endsWith(".")) {
+				url = url.substring(0, url.length() - 1);
+				trimmed = '.'+trimmed;
+			}
 			// Find the right part of the URL
-			if (url.startsWith("(")) {
-				url = url.substring(1, url.length() - (url.endsWith(")")?2:1)); 
+			if (message.charAt(Math.max(0, urls.start()-1)) == '(' && url.endsWith(")")) {
+				url = url.substring(0, url.length() - 1);
+				trimmed = ')'+trimmed;
+				
 			}
 			// Keep the body of the tag.
 			String text=url;
+			// Now we know we're in a URL, fix any &amp; in the URL.
+			url = url.replaceAll("&amp;", "&");
 			// If there isn't a protocol, assume http://
 			if(urls.group(1) == null) {
 				url = "http://"+url;
 			}
-			urls.appendReplacement(out, "<a href='"+ url+ "'>"+text+"</a>");
+			urls.appendReplacement(out, "<a href='"+ url+ "' target='_blank'>"+text+"</a>"+ trimmed);
 		}
 		urls.appendTail(out);
 		return out.toString();

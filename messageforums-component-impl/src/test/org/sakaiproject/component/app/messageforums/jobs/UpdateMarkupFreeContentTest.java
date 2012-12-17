@@ -40,18 +40,20 @@ public class UpdateMarkupFreeContentTest {
 	public void testHTMLEntities() {
 		assertEquals("\"", updateContent.updateBody("\""));
 		assertEquals("&amp;", updateContent.updateBody("&amp;"));
-		assertEquals("&lt;&gt;", updateContent.updateBody("&lt;&gt;"));
+		assertEquals("", updateContent.updateBody("&lt;&gt;"));
 	}
 	
 	@Test 
 	public void testLinks() {
-		assertEquals("<a href='http://news.bbc.co.uk'>http://news.bbc.co.uk</a>", updateContent.updateBody("<a href='http://news.bbc.co.uk'>http://news.bbc.co.uk</a>"));
-		assertEquals("<a href='http://www.google.com/news/'>http://www.google.com/news/</a>", updateContent.updateBody("http://www.google.com/news/"));
+		assertEquals("<a href='http://news.bbc.co.uk' target='_blank'>http://news.bbc.co.uk</a>",
+				updateContent.updateBody("<a href='http://news.bbc.co.uk'>http://news.bbc.co.uk</a>"));
+		assertEquals("<a href='http://www.google.com/news/' target='_blank'>http://www.google.com/news/</a>",
+				updateContent.updateBody("http://www.google.com/news/"));
 	}
 	
 	@Test
 	public void testNewlines() {
-		assertEquals("Hello All,<br />I would like to start", updateContent.updateBody("Hello All,\n<div><br/>\nI would like to start"));
+		assertEquals("Hello All,<br /><br />I would like to start", updateContent.updateBody("Hello All,\n<div><br/>\nI would like to start"));
 	}
 	
 	@Test
@@ -66,6 +68,27 @@ public class UpdateMarkupFreeContentTest {
 		String original = loadResource("post-with-br-original.txt");
 		String filtered = loadResource("post-with-br-filtered.txt");
 		assertEquals(filtered, updateContent.updateBody(original));
+	}
+	
+	@Test
+	public void testEscapeWordContent() {
+		assertEquals("<br /><br />", updateContent.updateBody("&lt;!--[if gte mso 9]&gt;&lt;xml&gt;\n" + 
+				"&lt;o:OfficeDocumentSettings&gt;\n" + 
+				"&lt;o:AllowPNG /&gt;\n" + 
+				"&lt;/o:OfficeDocumentSettings&gt;"));
+	}
+	
+	@Test
+	public void testEntitiesInLinks() {
+		// We need to make sure that & in URLs doesn't get turned into &amp;
+		assertEquals("Q&amp;A <a href='http://www.ox.ac.uk/go?a=1&b=2' target='_blank'>http://www.ox.ac.uk/go?a=1&amp;b=2</a>",
+				updateContent.updateBody("Q&A http://www.ox.ac.uk/go?a=1&b=2"));
+	}
+	
+	@Test
+	public void testAnchorWithText() {
+		assertEquals("Google (<a href='http://www.google.com/' target='_blank'>http://www.google.com/</a>)",
+				updateContent.updateBody("<a href='http://www.google.com/'>Google</a>"));
 	}
 
 	private String loadResource(String resource) {

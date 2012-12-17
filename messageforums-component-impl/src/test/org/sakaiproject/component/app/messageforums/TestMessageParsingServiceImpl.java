@@ -10,19 +10,19 @@ public class TestMessageParsingServiceImpl extends TestCase {
 
 	private String message1="The quick brown fox jumped over the lazy dog\nwww.bbc.co.uk";
 	private String result1="The quick brown fox jumped over the lazy dog\nwww.bbc.co.uk";
-	private String storage1="The quick brown fox jumped over the lazy dog<br /><a href='http://www.bbc.co.uk'>www.bbc.co.uk</a>";
+	private String storage1="The quick brown fox jumped over the lazy dog<br /><a href='http://www.bbc.co.uk' target='_blank'>www.bbc.co.uk</a>";
 	
 	private String message2="The quick brown fox jumped over the lazy dog<br />www.bbc.co.uk";
 	private String result2="The quick brown fox jumped over the lazy dog<br />www.bbc.co.uk";
-	private String storage2="The quick brown fox jumped over the lazy dog&lt;br /&gt;<a href='http://www.bbc.co.uk'>www.bbc.co.uk</a>";
+	private String storage2="The quick brown fox jumped over the lazy dog&lt;br /&gt;<a href='http://www.bbc.co.uk' target='_blank'>www.bbc.co.uk</a>";
 	
 	private String message3="just sending http://news.bbc.co.uk and expecting WebLearn to mark it\nup?";
 	private String result3="just sending http://news.bbc.co.uk and expecting WebLearn to mark it\nup?";
-	private String storage3="just sending <a href='http://news.bbc.co.uk'>http://news.bbc.co.uk</a> and expecting WebLearn to mark it<br />up?";
+	private String storage3="just sending <a href='http://news.bbc.co.uk' target='_blank'>http://news.bbc.co.uk</a> and expecting WebLearn to mark it<br />up?";
 				
 	private String message4="<b>Fred bloggs</b> visits the bbc website: http://bbc.co.uk.\n\n<i>Alice</i> on the other hand doesnt.\n\"";
 	private String result4="<b>Fred bloggs</b> visits the bbc website: http://bbc.co.uk.\n\n<i>Alice</i> on the other hand doesnt.\n\"";
-	private String storage4="&lt;b&gt;Fred bloggs&lt;/b&gt; visits the bbc website: <a href='http://bbc.co.uk'>http://bbc.co.uk</a>.<br /><br />&lt;i&gt;Alice&lt;/i&gt; on the other hand doesnt.<br />\"";
+	private String storage4="&lt;b&gt;Fred bloggs&lt;/b&gt; visits the bbc website: <a href='http://bbc.co.uk' target='_blank'>http://bbc.co.uk</a>.<br /><br />&lt;i&gt;Alice&lt;/i&gt; on the other hand doesnt.<br />\"";
 			
 	public TestMessageParsingServiceImpl(String name) {
 		super(name);
@@ -88,7 +88,9 @@ public class TestMessageParsingServiceImpl extends TestCase {
 	
 	@Test
 	public void testMissingProtocol() {
-		assertEquals("<a href='http://news.bbc.co.uk'>news.bbc.co.uk</a>", messageParsingService.parse("news.bbc.co.uk"));
+		assertEquals("<a href='http://www.ox.ac.uk' target='_blank'>www.ox.ac.uk</a>", messageParsingService.parse("www.ox.ac.uk"));
+		assertEquals("<a href='http://news.bbc.co.uk' target='_blank'>news.bbc.co.uk</a>", messageParsingService.parse("news.bbc.co.uk"));
+		assertEquals("<a href='http://weblearn.ox.ac.uk' target='_blank'>weblearn.ox.ac.uk</a>", messageParsingService.parse("weblearn.ox.ac.uk"));
 	}
 	
 	@Test
@@ -103,13 +105,63 @@ public class TestMessageParsingServiceImpl extends TestCase {
 	}
 	
 	@Test
-	public void testEmail() {
-		testUnchanged("matthew.buckett@it.ox.ac.uk ");
-	}
-	public void testURL(String url) {
-		assertEquals("<a href='"+ url+ "'>"+ url+ "</a>", messageParsingService.parse(url));
+	public void testHttps() {
+		testURL("https://www.secure.com/");
+		
 	}
 	
+	@Test
+	public void testEmail() {
+		testUnchanged("matthew.buckett@it.ox.ac.uk");
+		testUnchanged("  matthew.buckett@it.ox.ac.uk  ");
+	}
+	
+	@Test
+	public void testTerminator() {
+		// Checking that the terminator matches.
+		assertEquals(" <a href='http://www.ele.ac.uk/' target='_blank'>http://www.ele.ac.uk/</a> ", messageParsingService.parse(" http://www.ele.ac.uk/ "));
+	}
+	
+	@Test
+	public void testEntitiesInLinks() {
+		// We need to make sure that & in URLs doesn't get turned into &amp;
+		assertEquals("Q&amp;A <a href='http://www.ox.ac.uk/go?a=1&b=2' target='_blank'>http://www.ox.ac.uk/go?a=1&amp;b=2</a>",
+				messageParsingService.parse("Q&A http://www.ox.ac.uk/go?a=1&b=2"));
+	}
+	
+	@Test
+	public void testMultipleNewlines() {
+		assertEquals("Hello<br /><br />World", messageParsingService.parse("Hello\n\nWorld"));
+	}
+	
+	@Test
+	public void testInBrackets() {
+		assertEquals("(<a href='http://www.ox.ac.uk' target='_blank'>http://www.ox.ac.uk</a>)", messageParsingService.parse("(http://www.ox.ac.uk)"));
+		assertEquals("(<a href='http://www.cam.ac.uk/' target='_blank'>http://www.cam.ac.uk/</a>)", messageParsingService.parse("(http://www.cam.ac.uk/)"));
+		assertEquals("(<a href='http://www.ex.ac.uk' target='_blank'>www.ex.ac.uk</a>)", messageParsingService.parse("(www.ex.ac.uk)"));
+		assertEquals("(<a href='https://itunes.apple.com/gb/id288751446?mt=8' target='_blank'>https://itunes.apple.com/gb/id288751446?mt=8</a>)",
+				messageParsingService.parse("(https://itunes.apple.com/gb/id288751446?mt=8)"));
+	}
+	
+	//@Test
+	public void strangeWhitespace() {
+		// After See is a non breaking space C2 A0 (UTF-8 hex).
+		assertEquals("(See <a href='https://itunes.apple.com/link' target='_blank'>https://itunes.apple.com/link</a>)",
+				messageParsingService.parse("See https://itunes.apple.com/link"));
+	
+	}
+	
+	@Test
+	public void testInBracketsWithStop() {		
+		assertEquals("(<a href='http://news.bbc.co.uk/' target='_blank'>http://news.bbc.co.uk/</a>).", messageParsingService.parse("(http://news.bbc.co.uk/)."));
+		assertEquals("(<a href='http://news.bbc.co.uk' target='_blank'>http://news.bbc.co.uk</a>).", messageParsingService.parse("(http://news.bbc.co.uk)."));
+	}
+	
+	public void testURL(String url) {
+		assertEquals("<a href='"+ url+ "' target='_blank'>"+ url+ "</a>", messageParsingService.parse(url));
+	}
+	
+		
 	public void testUnchanged(String test) {
 		assertEquals(test, messageParsingService.parse(test));
 	}

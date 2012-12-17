@@ -27,7 +27,7 @@ public class UpdateMarkupFreeContent implements Job {
 	
 	// These are escaped tags which should have been stripped.
 	// Use non-greedy matcher.
-	private static final Pattern escapedTags = Pattern.compile("&lt;.+?&gt;", Pattern.MULTILINE);
+	private static final Pattern anchorTags = Pattern.compile("<a.*?href=('|\")(.*?)\\1.*?>(.*?)</a>");
 	
 	private MessageForumsMessageManager messageForumsMessageManager;
 	
@@ -75,12 +75,34 @@ public class UpdateMarkupFreeContent implements Job {
 	}
 	
 	/**
-	 * Update the body of a message.
+	 * Update the body of a message removing most of the HTML and then adding it back in where we need to.
 	 */
 	public String updateBody(String body) {
-		Matcher matcher = escapedTags.matcher(body);
-		String cleanBody = matcher.replaceAll("");
-		return messageParsingService.parse(messageParsingService.format(cleanBody));
+		String cleanBody = body.replaceAll("&lt;", "<");
+		cleanBody = cleanBody.replaceAll("&gt;", ">");
+		
+		
+		Matcher anchorMatcher = anchorTags.matcher(cleanBody); //.replaceAll("$3 ($2)")
+		StringBuffer anchorBuilder = new StringBuffer();
+		while(anchorMatcher.find()) {
+			String url = anchorMatcher.group(2);
+			String name = anchorMatcher.group(3);
+			// use contains so if there are existing elements in the name we still match
+			if (name.contains(url)) {
+				anchorMatcher.appendReplacement(anchorBuilder, url);
+			} else {
+				anchorMatcher.appendReplacement(anchorBuilder, name+ " "+ "("+ url+ ")");
+			}
+		}
+		anchorMatcher.appendTail(anchorBuilder);
+		
+		String newBody = anchorBuilder.toString().replaceAll("\n", "<br />");
+		newBody = newBody.replaceAll("</div>", "<br /><br />");
+
+		String clean = messageParsingService.parse(messageParsingService.format(newBody));
+		// Trim multiple <br />
+		clean = clean.replaceAll("<br />(:?\\w*<br />)+", "<br /><br />");
+		return clean;
 	}
 
 }
