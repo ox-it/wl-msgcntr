@@ -112,8 +112,21 @@ public class TestMessageParsingServiceImpl extends TestCase {
 	
 	@Test
 	public void testEmail() {
-		testUnchanged("matthew.buckett@it.ox.ac.uk");
-		testUnchanged("  matthew.buckett@it.ox.ac.uk  ");
+		testEmail("matthew.buckett@it.ox.ac.uk");
+		testEmail("me+123@gmail.com");
+	}
+	
+	@Test
+	public void testEmailsInText() {
+		// In brackets
+		assertEquals("(<a href='mailto:a@example.com'>a@example.com</a>)", messageParsingService.parse("(a@example.com)"));
+		assertEquals("My new email is <a href='mailto:b@example.com'>b@example.com</a>.", messageParsingService.parse("My new email is b@example.com."));
+	}
+	
+	@Test
+	public void testNonEmail() {
+		testUnchanged("My twitter handle is @buckett");
+		testUnchanged("I bought 4 apples @ $2.99");
 	}
 	
 	@Test
@@ -159,6 +172,10 @@ public class TestMessageParsingServiceImpl extends TestCase {
 	
 	public void testURL(String url) {
 		assertEquals("<a href='"+ url+ "' target='_blank'>"+ url+ "</a>", messageParsingService.parse(url));
+	}
+	
+	public void testEmail(String email) {
+		assertEquals("<a href='mailto:"+ email+ "'>"+ email+ "</a>", messageParsingService.parse(email));
 	}
 	
 		

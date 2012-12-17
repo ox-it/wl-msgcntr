@@ -87,8 +87,11 @@ public class UpdateMarkupFreeContent implements Job {
 		while(anchorMatcher.find()) {
 			String url = anchorMatcher.group(2);
 			String name = anchorMatcher.group(3);
+			// drop any mailto links and we'll pick them up again.
+			if (url.startsWith("mailto:")) {
+				anchorMatcher.appendReplacement(anchorBuilder, name);
 			// use contains so if there are existing elements in the name we still match
-			if (name.contains(url)) {
+			} else if (name.contains(url)) {
 				anchorMatcher.appendReplacement(anchorBuilder, url);
 			} else {
 				anchorMatcher.appendReplacement(anchorBuilder, name+ " "+ "("+ url+ ")");

@@ -11,6 +11,10 @@ public class MessageParsingServiceImpl implements MessageParsingService {
 	private Pattern brCleanup = Pattern.compile("<\\s*br\\s*[^<>]?>", Pattern.CASE_INSENSITIVE);
 	// Key is to look for a domain name which ends in 2 or 4 characters.
 	private Pattern findURLs = Pattern.compile("(?<=\\s|>|;|\\(|^)((?:http|ftp)s?://)?+(?:[\\w-]+\\.)+([a-z]{2,4})(:\\d+)?(/[-#;&=?+%/\\.\\w\\(\\)]*)?(?=\\s|\\.|\\)|<|,|;|$)");
+	// Looks for emails.
+	// This is a simple scan for emails as it's bettern to ignore valid emails than to markup stuff that isn't.
+	private Pattern findEmails = Pattern.compile("[\\w-\\+.=]+@[\\w-\\+]+(?:\\.[\\w-\\+]+)+");
+	
 	
 	public String parse(String message) {
 		// Get rid of form feeds.
@@ -24,9 +28,15 @@ public class MessageParsingServiceImpl implements MessageParsingService {
 		
 		withMarkup = withMarkup.replaceAll("\\n", "<br />");
 		withMarkup = markupURLs(withMarkup);
+		withMarkup = markupEmails(withMarkup);
 		return withMarkup;
 	}
 	
+	public String markupEmails(String message) {
+		String withMarkup = findEmails.matcher(message).replaceAll("<a href='mailto:$0'>$0</a>");
+		return withMarkup;
+	}
+
 	public String markupURLs(String message) {
 		Matcher urls = findURLs.matcher(message);
 		StringBuffer out = new StringBuffer();
