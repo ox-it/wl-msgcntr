@@ -156,16 +156,18 @@ public class TestMessageParsingServiceImpl extends TestCase {
 				messageParsingService.parse("(https://itunes.apple.com/gb/id288751446?mt=8)"));
 	}
 	
-	//@Test
+	// This test fails due to non-breaking space before the http:// fixing this complicates the regexp and it's an edge case so it 
+	// doesn't currently work, but if we change how we perform scanning it's a case to consider.
+	// Paste from word is my guess as to how this occurred in the first place.
+	// @Test
 	public void strangeWhitespace() {
 		// After See is a non breaking space C2 A0 (UTF-8 hex).
 		assertEquals("(See <a href='https://itunes.apple.com/link' target='_blank'>https://itunes.apple.com/link</a>)",
 				messageParsingService.parse("See https://itunes.apple.com/link"));
-	
 	}
 	
 	@Test
-	public void testInBracketsWithStop() {		
+	public void testInBracketsWithStop() {
 		assertEquals("(<a href='http://news.bbc.co.uk/' target='_blank'>http://news.bbc.co.uk/</a>).", messageParsingService.parse("(http://news.bbc.co.uk/)."));
 		assertEquals("(<a href='http://news.bbc.co.uk' target='_blank'>http://news.bbc.co.uk</a>).", messageParsingService.parse("(http://news.bbc.co.uk)."));
 	}
