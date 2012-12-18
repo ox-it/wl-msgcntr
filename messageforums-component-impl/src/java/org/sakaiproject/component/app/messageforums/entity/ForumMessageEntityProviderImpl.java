@@ -240,20 +240,23 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
             
       		Message replyToMessage = forumManager.getMessageById(dMessage.getReplyTo());
       		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
-      		//DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+      		
       		
       		if (!forumManager.canUserPostMessage(topic.getId(), "createEntity")) {
       			throw new SecurityException("Could not create entity, permission denied: " + ref);
       		}
-      		
       		try {
-            
+      			// We only handle discussion messages :-(
       		    Message aMsg = messageManager.createDiscussionMessage();
+      		    DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
       		    
       		    if (aMsg != null) {
       		    	StringBuilder alertMsg = new StringBuilder();
       		    	aMsg.setTitle(FormattedText.processFormattedText(dMessage.getTitle(), alertMsg));
-      		    	aMsg.setBody(FormattedText.processFormattedText(dMessage.getBody(), alertMsg));
+      		    	String body = (forum.getMarkupFree())?
+      		    			messageParsingService.format(dMessage.getBody()):
+      		    			FormattedText.processFormattedText(dMessage.getBody(), alertMsg);
+      		    	aMsg.setBody(body);
       		      
       		    	if (userId!=null) {
       		    		aMsg.setAuthor(getUserNameOrEid());
@@ -271,7 +274,7 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
       		    	// if the author has moderator perm, the msg is automatically approved\
       		      
       		    	if (!(topic.getModerated().booleanValue() && 
-      		    			uiPermissionsManager.isModeratePostings(topic, (DiscussionForum) topic.getBaseForum()))) {
+      		    			uiPermissionsManager.isModeratePostings(topic, forum))) {
       		    		aMsg.setApproved(Boolean.TRUE);
       		    	}
       		    	
@@ -322,27 +325,38 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
     		DecoratedMessage dMessage = (DecoratedMessage) entity;
     		
     		DiscussionTopic topic = forumManager.getTopicById(dMessage.getTopicId());
-        	//DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
+        	DiscussionForum forum = (DiscussionForum)topic.getBaseForum();
       		
-        	if (!forumManager.canUserPostMessage(topic.getId(), "createEntity")) {
+    		if(!uiPermissionsManager.isReviseAny(topic, forum) && !(message.getCreatedBy().equals(userId)
+    				&& uiPermissionsManager.isReviseOwn(topic, forum))) {
       			throw new SecurityException("Could not create entity, permission denied: " + ref);
-      		}
-	    		
-			String body = dMessage.getBody();
-			String revisedInfo = "<p class=\"lastRevise textPanelFooter\">" + 
-					getResourceBundleString(LAST_REVISE_BY);
+    		}
+    		
+    		// This is duplicated from the tool and should be refactored out into the service.
+			String revisedInfo = getResourceBundleString(LAST_REVISE_BY);
 
 			revisedInfo += getUserNameOrEid();
 
 			revisedInfo  += " " + getResourceBundleString(LAST_REVISE_ON);
 			Date now = new Date();
-			revisedInfo += now.toString() + " </p> ";
-    
-			revisedInfo = revisedInfo.concat(body);
+			revisedInfo += now.toString();
+			
+			// Need a different header if it's a markup free forum.
+			if (forum.getMarkupFree())
+			{
+				revisedInfo = revisedInfo + "\n";
+			} else {
+				revisedInfo = "<p class=\"lastRevise textPanelFooter\">"+ revisedInfo + " </p>";
+			}
+
+			revisedInfo = revisedInfo.concat(dMessage.getBody());
 
 			StringBuilder alertMsg = new StringBuilder();
 			message.setTitle(FormattedText.processFormattedText(dMessage.getTitle(), alertMsg));
-			message.setBody(FormattedText.processFormattedText(revisedInfo, alertMsg));
+			String filteredBody = forum.getMarkupFree()?
+					messageParsingService.format(revisedInfo):
+					FormattedText.processFormattedText(revisedInfo, alertMsg);
+			message.setBody(filteredBody);
 			message.setDraft(Boolean.FALSE);
 			message.setModified(new Date());
 			  	
