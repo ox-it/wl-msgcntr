@@ -104,7 +104,7 @@ public class UpdateMarkupFreeContent implements Job {
 
 		String clean = messageParsingService.parse(messageParsingService.format(newBody));
 		// Trim multiple <br />
-		clean = clean.replaceAll("<br />(:?\\w*<br />)+", "<br /><br />");
+		clean = clean.replaceAll("<br />(:?\\s*<br />)+", "<br /><br />");
 		return clean;
 	}
 

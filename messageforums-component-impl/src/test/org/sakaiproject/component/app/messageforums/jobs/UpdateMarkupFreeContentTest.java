@@ -77,6 +77,12 @@ public class UpdateMarkupFreeContentTest {
 	}
 	
 	@Test
+	public void testMultipleBr() {
+		assertEquals("<br /><br />", updateContent.updateBody("<br />   \n  <br />"));
+		assertEquals("<br />word<br />", updateContent.updateBody("<br />word<br />"));
+	}
+	
+	@Test
 	public void testEscapeWordContent() {
 		assertEquals("<br /><br />", updateContent.updateBody("&lt;!--[if gte mso 9]&gt;&lt;xml&gt;\n" + 
 				"&lt;o:OfficeDocumentSettings&gt;\n" + 
