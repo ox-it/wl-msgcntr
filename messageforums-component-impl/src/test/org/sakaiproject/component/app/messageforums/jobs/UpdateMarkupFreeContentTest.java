@@ -52,6 +52,12 @@ public class UpdateMarkupFreeContentTest {
 	}
 	
 	@Test
+	public void testAnchors() {
+		assertEquals("Anchor <a href='http://www.ox.ac.uk/' target='_blank'>http://www.ox.ac.uk/</a>",
+				updateContent.updateBody("<a title='hello'>Anchor</a> <a href='http://www.ox.ac.uk/'>http://www.ox.ac.uk/</a>"));
+	}
+	
+	@Test
 	public void testNewlines() {
 		assertEquals("Hello All,<br /><br />I would like to start", updateContent.updateBody("Hello All,\n<div><br/>\nI would like to start"));
 	}

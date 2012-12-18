@@ -27,7 +27,7 @@ public class UpdateMarkupFreeContent implements Job {
 	
 	// These are escaped tags which should have been stripped.
 	// Use non-greedy matcher.
-	private static final Pattern anchorTags = Pattern.compile("<a.*?href=('|\")(.*?)\\1.*?>(.*?)</a>");
+	private static final Pattern anchorTags = Pattern.compile("<a[^>]*?href=('|\")(.*?)\\1.*?>(.*?)</a>");
 	
 	private MessageForumsMessageManager messageForumsMessageManager;
 	
