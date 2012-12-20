@@ -4058,7 +4058,7 @@ public class DiscussionForumTool
 	
     attachments.clear();
 
-    if (Boolean.parseBoolean(selectedForum.getMarkupFree())) {
+    if (selectedForum.getMarkupFree()) {
     	composeBody = messageParsingService.format(selectedMessage.getMessage().getBody());
     } else {
     	composeBody = selectedMessage.getMessage().getBody();
@@ -7869,7 +7869,7 @@ public class DiscussionForumTool
 		Session session = SessionManager.getCurrentSession();
 		String rv = (session.getAttribute("is_wireless_device") != null &&
 					((Boolean) session.getAttribute("is_wireless_device")).booleanValue()) ||
-					Boolean.parseBoolean(selectedForum.getMarkupFree()) ? 
+					selectedForum.getMarkupFree() ? 
 							"true":"false"; 
 		return rv;
 	}
@@ -7895,7 +7895,7 @@ public class DiscussionForumTool
 		DiscussionForumBean forum = getSelectedForum();
 		// Topic might be null if it's a PrivateMessage
 		if (forum != null) {
-			markupFree = forum.isMarkupFree();
+			markupFree = Boolean.valueOf(forum.getMarkupFree());
 		} else {
 			LOG.warn("No forum to find the markup free flag from.");
 		}
