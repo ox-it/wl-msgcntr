@@ -254,7 +254,7 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
       		    	StringBuilder alertMsg = new StringBuilder();
       		    	aMsg.setTitle(FormattedText.processFormattedText(dMessage.getTitle(), alertMsg));
       		    	String body = (forum.getMarkupFree())?
-      		    			messageParsingService.format(dMessage.getBody()):
+      		    			messageParsingService.parse(dMessage.getBody()):
       		    			FormattedText.processFormattedText(dMessage.getBody(), alertMsg);
       		    	aMsg.setBody(body);
       		      
@@ -354,7 +354,7 @@ public class ForumMessageEntityProviderImpl implements ForumMessageEntityProvide
 			StringBuilder alertMsg = new StringBuilder();
 			message.setTitle(FormattedText.processFormattedText(dMessage.getTitle(), alertMsg));
 			String filteredBody = forum.getMarkupFree()?
-					messageParsingService.format(revisedInfo):
+					messageParsingService.parse(revisedInfo):
 					FormattedText.processFormattedText(revisedInfo, alertMsg);
 			message.setBody(filteredBody);
 			message.setDraft(Boolean.FALSE);
