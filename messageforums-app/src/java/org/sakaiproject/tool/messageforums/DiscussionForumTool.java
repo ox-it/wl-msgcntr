@@ -3447,10 +3447,6 @@ public class DiscussionForumTool
     return createTopic(Long.valueOf(forumId));
   }
 
-  /**
-   * @param forumID
-   * @return
-   */
   private DiscussionTopicBean createTopic(Long forumId)
   {
     if (forumId == null)
@@ -6959,7 +6955,7 @@ public class DiscussionForumTool
         while (roleIter.hasNext())
         {
           Role role = (Role) roleIter.next();
-          if (role != null) 
+          if (role != null && AuthzGroupService.isRoleAssignable(role.getId()))
           {
             if(i==0)
             {
@@ -6972,7 +6968,7 @@ public class DiscussionForumTool
             permissions.add(new PermissionBean(item, permissionLevelManager));
           }
         }
-      }  
+      }
         
       if(includeGroup)
       {
