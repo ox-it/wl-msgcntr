@@ -486,9 +486,13 @@
    	   	<property name="timeService" ref="org.sakaiproject.time.api.TimeService" />
    	</bean>
     
-    <bean id="org.sakaiproject.api.app.messageforums.ForumTopicEntityProvider" class="org.sakaiproject.component.app.messageforums.entity.ForumTopicEntityProviderImpl">
-		<property name="forumManager" ref="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" />
-    </bean>
+  	<bean id="org.sakaiproject.api.app.messageforums.ForumTopicEntityProvider" class="org.sakaiproject.component.app.messageforums.entity.ForumTopicEntityProviderImpl">
+			<property name="forumManager" ref="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" />
+			<property name="uiPermissionsManager"  ref="org.sakaiproject.api.app.messageforums.ui.UIPermissionsManager"/>
+			<property name="messageManager" ref="org.sakaiproject.api.app.messageforums.MessageForumsMessageManager"/>
+			<property name="privateMessageManager" ref="org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager"/>
+			<property name="typeManager" ref="org.sakaiproject.api.app.messageforums.MessageForumsTypeManager"/>
+		</bean>
     
     <bean id="org.sakaiproject.api.app.messageforums.TopicEntityProvider" class="org.sakaiproject.component.app.messageforums.entity.TopicEntityProviderImpl">
 		<property name="forumManager" ref="org.sakaiproject.api.app.messageforums.ui.DiscussionForumManager" />
