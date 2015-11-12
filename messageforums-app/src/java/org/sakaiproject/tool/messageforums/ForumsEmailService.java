@@ -99,7 +99,7 @@ public class ForumsEmailService {
 			log.info(fromEmailAddress);
 			
 			String subject = DiscussionForumTool.getResourceBundleString("email.subject", 
-					new Object[]{fromName, reply.getAuthor()});
+					new Object[]{threadhead.getMessage().getTitle(), reply.getAuthor()});
 
 			EmailAddress fromIA = new EmailAddress(fromEmailAddress,
 					fromName);
