@@ -33,6 +33,8 @@ import org.sakaiproject.site.api.ToolConfiguration;
 import org.sakaiproject.tool.api.ToolManager;
 import org.sakaiproject.tool.messageforums.entityproviders.sparsepojos.*;
 import org.sakaiproject.tool.messageforums.entityproviders.utils.MessageUtils;
+import org.sakaiproject.user.api.UserDirectoryService;
+import org.sakaiproject.user.api.UserNotDefinedException;
 
 /**
  * Provides the forums entity provider. 
@@ -59,6 +61,9 @@ public class ForumsEntityProviderImpl extends AbstractEntityProvider implements 
 
 	@Setter
 	private SecurityService securityService;
+
+	@Setter
+	private UserDirectoryService userDirectoryService;
 
 	public String getEntityPrefix() {
 		return ENTITY_PREFIX;
@@ -330,7 +335,13 @@ public class ForumsEntityProviderImpl extends AbstractEntityProvider implements 
 		}
 		
 		Message fatMessage = forumManager.getMessageById(messageId);
-		
+		//fatmessage has user_Id set in the 'modifiedBy' field, setting it to displayId for display purpose
+		try {
+			String displayId =  userDirectoryService.getUser(fatMessage.getModifiedBy()).getDisplayId();
+			fatMessage.setModifiedBy(displayId);
+		} catch (UserNotDefinedException e) {
+			LOG.debug(" User not defined for id '" + fatMessage.getModifiedBy() + "'.");
+		}
 		Topic fatTopic = forumManager.getTopicByIdWithMessagesAndAttachments(fatMessage.getTopic().getId());
 		
 		// This sets the attachments on the message.We have to do this as
