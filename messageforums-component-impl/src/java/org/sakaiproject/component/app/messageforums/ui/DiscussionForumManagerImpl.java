@@ -2602,4 +2602,13 @@ public abstract class DiscussionForumManagerImpl extends HibernateDaoSupport imp
 		String contextId = area.getContextId();
 	    return uiPermissionsManager().isNewResponseToResponse(topic, forum, contextId);
 	}
+
+	public List getRecentDiscussionForumThreadsByTopicIds(List<Long> topicIds, int numberOfMessages)
+	{
+		if (LOG.isDebugEnabled())
+		{
+			LOG.debug("getRecentDiscussionForumMessagesByContext( Size of list is " + topicIds.size() + ")");
+		}
+		return messageManager.getRecentDiscussionForumThreadsByTopicIds(topicIds, numberOfMessages);
+	}
 }
